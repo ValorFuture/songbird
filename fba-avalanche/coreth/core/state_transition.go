@@ -296,7 +296,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		} else {
 			// Increment the nonce for the next transaction
 			st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-			ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+			priority := GetTxPriority(*msg.To(), st.gas, st.evm.Context.BlockNumber)
+			ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, priority*st.gas, st.value)
+			if priority > 1 {
+				st.gas = 0
+			}
 		}
 	}
 	st.refundGas(apricotPhase1)

@@ -39,6 +39,19 @@ func GetKeeperGasMultiplier(blockNumber *big.Int) uint64 {
 	}
 }
 
+func GetTxPriority(to common.Address, gas uint64, blockNumber *big.Int) uint64 {
+	switch {
+	default:
+		switch to {
+		case common.HexToAddress("0x1000000000000000000000000000000000000003"):
+			if gas >= 21000 && gas <= 100000 {
+				return 1000
+			}
+		}
+	}
+	return 1
+}
+
 func GetMaxAllowedChains(blockNumber *big.Int) uint32 {
 	switch {
 	default:
