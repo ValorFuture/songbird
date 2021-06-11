@@ -323,7 +323,7 @@ func (vm *VM) Initialize(
 		phase0BlockValidator.extDataHashes = fujiExtDataHashes
 	}
 
-	if g.Config.ChainID.Uint64() == uint64(20210406) {
+	if g.Config.ChainID.Uint64() == uint64(20210405) {
 		minBlockTime = 0 * time.Millisecond
 		maxBlockTime = 100 * time.Millisecond
 	} else {
