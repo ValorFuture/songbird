@@ -42,7 +42,7 @@ func GetKeeperGasMultiplier(blockNumber *big.Int) uint64 {
 func GetMaxAllowedChains(blockNumber *big.Int) uint32 {
 	switch {
 	default:
-		return 1
+		return 4
 	}
 }
 
@@ -381,6 +381,108 @@ func ProveXRP(sender common.Address, blockNumber *big.Int, functionSelector []by
 }
 
 // =======================================================
+// LTC
+// =======================================================
+
+func ProveClaimPeriodFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProvePaymentFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func DisprovePaymentFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProveLTC(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
+	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
+		for _, evmAddress := range strings.Split(evmAddresses, ",") {
+			if len(evmAddress) == 45 {
+				if evmAddress[:3] == "ltc" && common.HexToAddress(evmAddress[3:]) == sender {
+					return ProveClaimPeriodFinalityLTC(checkRet, chainURL)
+				}
+			}
+		}
+		return false, false
+	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
+		return ProvePaymentFinalityLTC(checkRet, chainURL)
+	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
+		return DisprovePaymentFinalityLTC(checkRet, chainURL)
+	}
+	return false, false
+}
+
+// =======================================================
+// XLM
+// =======================================================
+
+func ProveClaimPeriodFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProvePaymentFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func DisprovePaymentFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProveXLM(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
+	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
+		for _, evmAddress := range strings.Split(evmAddresses, ",") {
+			if len(evmAddress) == 45 {
+				if evmAddress[:3] == "xlm" && common.HexToAddress(evmAddress[3:]) == sender {
+					return ProveClaimPeriodFinalityXLM(checkRet, chainURL)
+				}
+			}
+		}
+		return false, false
+	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
+		return ProvePaymentFinalityXLM(checkRet, chainURL)
+	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
+		return DisprovePaymentFinalityXLM(checkRet, chainURL)
+	}
+	return false, false
+}
+
+// =======================================================
+// DOGE
+// =======================================================
+
+func ProveClaimPeriodFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProvePaymentFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func DisprovePaymentFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
+	return true, false
+}
+
+func ProveDOGE(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
+	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
+		for _, evmAddress := range strings.Split(evmAddresses, ",") {
+			if len(evmAddress) == 45 {
+				if evmAddress[:3] == "dog" && common.HexToAddress(evmAddress[3:]) == sender {
+					return ProveClaimPeriodFinalityDOGE(checkRet, chainURL)
+				}
+			}
+		}
+		return false, false
+	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
+		return ProvePaymentFinalityDOGE(checkRet, chainURL)
+	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
+		return DisprovePaymentFinalityDOGE(checkRet, chainURL)
+	}
+	return false, false
+}
+
+// =======================================================
 // Common
 // =======================================================
 
@@ -388,6 +490,12 @@ func ProveChain(sender common.Address, blockNumber *big.Int, functionSelector []
 	switch chainId {
 	case 0:
 		return ProveXRP(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+	case 1:
+		return ProveLTC(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+	case 2:
+		return ProveXLM(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+	case 3:
+		return ProveDOGE(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
 	default:
 		return false, true
 	}
