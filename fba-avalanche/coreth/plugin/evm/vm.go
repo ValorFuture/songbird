@@ -327,8 +327,8 @@ func (vm *VM) Initialize(
 		minBlockTime = 0 * time.Millisecond
 		maxBlockTime = 100 * time.Millisecond
 	} else {
-		minBlockTime = 2 * time.Second
-		maxBlockTime = 3 * time.Second
+		minBlockTime = 9 * time.Second
+		maxBlockTime = 10 * time.Second
 	}
 
 	// Allow ExtDataHashes to be garbage collected as soon as freed from block
