@@ -28,10 +28,10 @@ func init() {
 		return
 	}
 
-	cliConfig.RPCGasCap = 2500000000
-	cliConfig.RPCTxFeeCap = 100
+	cliConfig.RPCGasCap = 4000000
+	cliConfig.RPCTxFeeCap = 225
 	cliConfig.APIMaxDuration = 7000000000 // 7 seconds
-	cliConfig.MaxBlocksPerRequest = 100
+	cliConfig.MaxBlocksPerRequest = 1
 
 	if *config != "default" {
 		for i, value := range strings.Split(*config, " ") {
