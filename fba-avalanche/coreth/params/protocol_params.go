@@ -29,7 +29,7 @@ package params
 import "math/big"
 
 const (
-	MinGasLimit     uint64 = 8000000 // Minimum the gas limit may ever be.
+	MinGasLimit     uint64 = 4000000 // Minimum the gas limit may ever be.
 	GenesisGasLimit uint64 = 200000000 // Gas limit of the Genesis block.
 
 	MaximumExtraDataSize  uint64 = 64    // Maximum size extra data may be after Genesis.
