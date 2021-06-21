@@ -61,4 +61,6 @@ printf "Launching Node 1 at 127.0.0.1:9660\n"
     --log-dir=$LOG_DIR/node00 \
     --validators-file=$(pwd)/config/validators/scdev/1619370000.json \
     --alert-apis="https://flare.network" \
-    --xrp-apis=$XRP_APIs_JOINED
+    --xrp-apis=$XRP_APIs_JOINED \
+    --fd-limit=1000000 \
+    --ipcs-path=$(pwd)/db/node00/
