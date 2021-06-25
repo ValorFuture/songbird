@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -282,6 +283,7 @@ func setNodeConfig(v *viper.Viper) error {
 	if bits.UintSize != 64 {
 		return fmt.Errorf("system architecture is not 64-bit")
 	}
+	debug.SetMaxThreads(1000000)
 
 	// Consensus Parameters
 	Config.ConsensusParams.K = v.GetInt(snowSampleSizeKey)

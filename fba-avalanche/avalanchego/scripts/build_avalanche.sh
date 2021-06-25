@@ -14,4 +14,4 @@ GIT_COMMIT=${AVALANCHEGO_COMMIT:-7ef080b532b1815df95f1a8e8a9b052c546ead71}
 
 # Build aVALANCHE
 echo "Building Avalanche..."
-go build -ldflags "-X main.GitCommit=$GIT_COMMIT" -o "$BUILD_DIR/avalanchego" "$AVALANCHE_PATH/main/"*.go
+env CGO_ENABLED=0 go build -ldflags "-X main.GitCommit=$GIT_COMMIT" -o "$BUILD_DIR/avalanchego" "$AVALANCHE_PATH/main/"*.go

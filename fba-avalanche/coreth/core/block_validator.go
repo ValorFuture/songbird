@@ -112,10 +112,6 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	return nil
 }
 
-// CalcGasLimit computes the gas limit of the next block after parent. It aims
-// to keep the baseline gas above the provided floor, and increase it towards the
-// ceil if the blocks are full. If the ceil is exceeded, it will always decrease
-// the gas allowance.
 func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
-	return parent.GasLimit()
+	return 8000000
 }

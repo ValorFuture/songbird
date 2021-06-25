@@ -199,6 +199,9 @@ func GetXRPBlock(ledger uint64, chainURL string) (string, bool) {
 }
 
 func ProveClaimPeriodFinalityXRP(checkRet []byte, chainURL string) (bool, bool) {
+	if binary.BigEndian.Uint64(checkRet[96:128]) == 0 {
+		return true, false
+	}
 	ledger := binary.BigEndian.Uint64(checkRet[56:64])
 	ledgerHashString, err := GetXRPBlock(ledger, chainURL)
 	if err {

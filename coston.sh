@@ -47,6 +47,9 @@ cd - &> /dev/null
     --db-dir=$(pwd)/db/node04/ \
     --staking-enabled=true \
     --p2p-tls-enabled=true \
+    --fd-limit=1000000 \
+    --conn-meter-reset-duration=10s \
+    --conn-meter-max-conns=1000 \
     --network-id=coston \
     --bootstrap-ips=$(curl -sX POST --data '{ "jsonrpc":"2.0", "id":1, "method":"info.getNodeIP" }' -H 'content-type:application/json;' https://coston.flare.network/ext/info | jq -r ".result.ip")  \
     --bootstrap-ids=$(curl -sX POST --data '{ "jsonrpc":"2.0", "id":1, "method":"info.getNodeID" }' -H 'content-type:application/json;' https://coston.flare.network/ext/info | jq -r ".result.nodeID")  \

@@ -246,6 +246,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.BlockNumber)
 	apricotPhase1 := st.evm.ChainConfig().IsApricotPhase1(st.evm.Time)
 	contractCreation := msg.To() == nil
+	chainConfig := st.evm.ChainConfig()
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
 	gas, err := IntrinsicGas(st.data, contractCreation, homestead, istanbul)
@@ -269,10 +270,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		selectDisprovePaymentFinality bool
 	)
 
-	if !contractCreation && *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
-		selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
-		selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
-		selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
+	if chainConfig.ChainID.Cmp(big.NewInt(16)) > 0 {
+		if !contractCreation && *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
+			selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
+			selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
+			selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
+		}
 	}
 
 	if selectClaimPeriodFinality || selectProvePaymentFinality || selectDisprovePaymentFinality {
@@ -280,7 +283,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		checkRet, _, checkVmerr := st.evm.Call(sender, st.to(), st.data, st.gas/GetStateConnectorGasDivisor(st.evm.Context.BlockNumber), st.value)
 		if checkVmerr == nil && (selectProvePaymentFinality || selectDisprovePaymentFinality || st.state.GetBalance(st.msg.From()).Cmp(GetMinReserve(st.evm.Context.BlockNumber)) >= 0) && binary.BigEndian.Uint32(checkRet[28:32]) < GetMaxAllowedChains(st.evm.Context.BlockNumber) {
-			chainConfig := st.evm.ChainConfig()
 			if StateConnectorCall(msg.From(), st.evm.Context.BlockNumber, st.data[0:4], checkRet, *chainConfig.StateConnectorConfig) {
 				originalCoinbase := st.evm.Context.Coinbase
 				defer func() {
