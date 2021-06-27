@@ -270,13 +270,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		selectDisprovePaymentFinality bool
 	)
 
-	if chainConfig.ChainID.Cmp(big.NewInt(16)) > 0 {
-		if !contractCreation && *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
-			selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
-			selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
-			selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
-		}
+	// if chainConfig.ChainID.Cmp(big.NewInt(14)) != 0 {
+	if !contractCreation && *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
+		selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
+		selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
+		selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
 	}
+	// }
 
 	if selectClaimPeriodFinality || selectProvePaymentFinality || selectDisprovePaymentFinality {
 		// Increment the nonce for the next transaction

@@ -38,7 +38,7 @@ var config,
 const RippleAPI = require('ripple-lib').RippleAPI;
 const RippleKeys = require('ripple-keypairs');
 
-async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength) {
+async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
 	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1);
 	const currLedger = genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1;
 	const command = 'ledger';
@@ -53,7 +53,7 @@ async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLen
 	};
 	return chains.xrp.api.request(command, params)
 	.then(response => {
-		return proveClaimPeriodFinality(0, genesisLedger + (claimPeriodIndex+1)*claimPeriodLength, claimPeriodIndex, web3.utils.sha3(response.ledger_hash));
+		return proveClaimPeriodFinality(0, genesisLedger + (claimPeriodIndex+1)*claimPeriodLength, claimPeriodIndex, web3.utils.sha3(response.ledger_hash), isCommit);
 	})
 	.catch(error => {
 		processFailure(error);
@@ -87,31 +87,37 @@ async function run(chainId, minLedger) {
 			if (chainId == 0) {
 				chains.xrp.api.getLedgerVersion().catch(processFailure)
 				.then(sampledLedger => {
-					if (parseInt(result.finalisedLedgerIndex) < parseInt(minLedger)) {
-						console.log("Waiting for network to independently verify prior claim period registration.");
-						return setTimeout(() => {run(chainId, minLedger)}, 5000);
-					} else {
-						console.log("Finalised claim period:\t\x1b[33m", parseInt(result.finalisedClaimPeriodIndex)-1, 
-							"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(result.finalisedLedgerIndex),
-							"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", sampledLedger,
-							"\n\x1b[0mFinalised Timestamp:\t\x1b[33m", parseInt(result.finalisedTimestamp),
-							"\n\x1b[0mCurrent Timestamp:\t\x1b[33m", parseInt(Date.now()/1000),
-							"\n\x1b[0mDiff Avg (sec):\t\t\x1b[33m", parseInt(result.timeDiffAvg));
-						const currTime = parseInt(Date.now()/1000);
-						var deferTime;
+					console.log("Finalised claim period:\t\x1b[33m", parseInt(result.finalisedClaimPeriodIndex)-1, 
+						"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(result.finalisedLedgerIndex),
+						"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", sampledLedger,
+						"\n\x1b[0mFinalised Timestamp:\t\x1b[33m", parseInt(result.finalisedTimestamp),
+						"\n\x1b[0mCurrent Timestamp:\t\x1b[33m", parseInt(Date.now()/1000),
+						"\n\x1b[0mDiff Avg (sec):\t\t\x1b[33m", parseInt(result.timeDiffAvg));
+					const currTime = parseInt(Date.now()/1000);
+					var deferTime;
+					if (parseInt(result.finalisedTimestamp) > 0) {
+						// Time to commit the proof
 						if (parseInt(result.timeDiffAvg) < 60) {
 							deferTime = parseInt(2*parseInt(result.timeDiffAvg)/3 - (currTime-parseInt(result.finalisedTimestamp)));
 						} else {
 							deferTime = parseInt(parseInt(result.timeDiffAvg) - (currTime-parseInt(result.finalisedTimestamp)) - 15);
 						}
-						
 						if (deferTime > 0) {
 							console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
 							return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
 						} else if (sampledLedger >= parseInt(result.genesisLedger) + (parseInt(result.finalisedClaimPeriodIndex)+1)*parseInt(result.claimPeriodLength)) {
-							return xrplProcessLedger(parseInt(result.genesisLedger), parseInt(result.finalisedClaimPeriodIndex), parseInt(result.claimPeriodLength));
+							return xrplProcessLedger(parseInt(result.genesisLedger), parseInt(result.finalisedClaimPeriodIndex), parseInt(result.claimPeriodLength), true);
 						} else {
 							return xrplClaimProcessingCompleted('Reached latest state, waiting for new ledgers.');
+						}
+					} else {
+						// Time to reveal the proof
+						if (currTime > parseInt(result.timeDiffAvg)) {
+							return xrplProcessLedger(parseInt(result.genesisLedger), parseInt(result.finalisedClaimPeriodIndex), parseInt(result.claimPeriodLength), false);
+						} else {
+							deferTime = parseInt(result.timeDiffAvg)-currTime;
+							console.log("Not enough time elapsed since proof commit, deferring for", deferTime, "seconds.");
+							return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
 						}
 					}
 				})
@@ -122,7 +128,7 @@ async function run(chainId, minLedger) {
 	})
 }
 
-async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash) {
+async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, isCommit) {
 	stateConnector.methods.getClaimPeriodIndexFinality(
 					parseInt(chainId),
 					claimPeriodIndex).call({
@@ -131,7 +137,7 @@ async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claim
 		gasPrice: config.flare.gasPrice
 	}).catch(processFailure)
 	.then(result => {
-		console.log('Claim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
+		console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
 		if (result == true) {
 			if (chainId == 0) {
 				return xrplClaimProcessingCompleted('This claim period already registered.');
@@ -141,11 +147,19 @@ async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claim
 		} else {
 			web3.eth.getTransactionCount(config.accounts[0].address)
 			.then(nonce => {
-				return [stateConnector.methods.proveClaimPeriodFinality(
-							chainId,
-							ledger,
-							claimPeriodIndex,
-							claimPeriodHash).encodeABI(), nonce];
+				if (isCommit) {
+					return [stateConnector.methods.proveClaimPeriodFinality(
+						chainId,
+						ledger,
+						claimPeriodIndex,
+						web3.utils.soliditySha3(config.accounts[0].address, claimPeriodHash)).encodeABI(), nonce];
+				} else {
+					return [stateConnector.methods.proveClaimPeriodFinality(
+						chainId,
+						ledger,
+						claimPeriodIndex,
+						claimPeriodHash).encodeABI(), nonce];
+				}
 			})
 			.then(txData => {
 				var rawTx = {

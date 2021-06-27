@@ -28,7 +28,7 @@ func GetMinReserve(blockNumber *big.Int) *big.Int {
 func GetStateConnectorGasDivisor(blockNumber *big.Int) uint64 {
 	switch {
 	default:
-		return 100
+		return 1
 	}
 }
 
