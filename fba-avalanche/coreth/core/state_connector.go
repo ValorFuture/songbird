@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
@@ -16,6 +17,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 )
+
+const LTC_USERNAME = ""
+
+const LTC_PASSWORD = ""
 
 func GetMinReserve(blockNumber *big.Int) *big.Int {
 	switch {
@@ -221,16 +226,19 @@ type GetXRPTxRequestPayload struct {
 	Method string                  `json:"method"`
 	Params []GetXRPTxRequestParams `json:"params"`
 }
+type TxMetaData struct {
+	Amount interface{} `json:delivered_amount`
+}
 type GetXRPTxResponse struct {
-	Account         string      `json:"Account"`
-	Amount          interface{} `json:"Amount"`
-	Destination     string      `json:"Destination"`
-	DestinationTag  int         `json:"DestinationTag"`
-	TransactionType string      `json:"TransactionType"`
-	Hash            string      `json:"hash"`
-	InLedger        int         `json:"inLedger"`
-	Flags           int         `json:"Flags"`
-	Validated       bool        `json:"validated"`
+	Account         string     `json:"Account"`
+	Destination     string     `json:"Destination"`
+	DestinationTag  int        `json:"DestinationTag"`
+	TransactionType string     `json:"TransactionType"`
+	Hash            string     `json:"hash"`
+	InLedger        int        `json:"inLedger"`
+	Flags           int        `json:"Flags"`
+	Validated       bool       `json:"validated"`
+	Meta            TxMetaData `json:"meta"`
 }
 
 type GetXRPTxIssuedCurrency struct {
@@ -295,13 +303,13 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 		}
 		if jsonResp["result"].TransactionType == "Payment" {
 			inLedger := uint64(jsonResp["result"].InLedger)
-			if jsonResp["result"].Flags != 131072 && inLedger > 0 && inLedger < latestAvailableLedger && jsonResp["result"].Validated {
+			if inLedger > 0 && inLedger < latestAvailableLedger && jsonResp["result"].Validated {
 				var amount uint64
-				amountInterface := jsonResp["result"].Amount
+				amountInterface := jsonResp["result"].Meta.Amount
 				amountType := reflect.TypeOf(amountInterface)
 				var currency string
 				if amountType.Name() == "string" {
-					amount, err = strconv.ParseUint(jsonResp["result"].Amount.(string), 10, 64)
+					amount, err = strconv.ParseUint(jsonResp["result"].Meta.Amount.(string), 10, 64)
 					if err != nil {
 						return []byte{}, 0, false
 					}
@@ -384,11 +392,142 @@ func ProveXRP(sender common.Address, blockNumber *big.Int, functionSelector []by
 }
 
 // =======================================================
+// Proof of Work Common
+// =======================================================
+
+type GetPoWRequestPayload struct {
+	Method string   `json:"method"`
+	Params []string `json:"params"`
+}
+type GetPoWBlockCountResp struct {
+	Result uint64      `json:"result"`
+	Error  interface{} `json:"error"`
+}
+
+func GetPoWBlockCount(chainURL string, username string, password string) (uint64, bool) {
+	data := GetPoWRequestPayload{
+		Method: "getblockcount",
+		Params: []string{},
+	}
+	payloadBytes, err := json.Marshal(data)
+	if err != nil {
+		return 0, true
+	}
+	body := bytes.NewReader(payloadBytes)
+	req, err := http.NewRequest("POST", chainURL, body)
+	if err != nil {
+		return 0, true
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if username != "" && password != "" {
+		req.SetBasicAuth(username, password)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, true
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return 0, true
+		}
+		var jsonResp GetPoWBlockCountResp
+		err = json.Unmarshal(respBody, &jsonResp)
+		if err != nil {
+			return 0, true
+		}
+		if jsonResp.Error != nil {
+			return 0, true
+		}
+		return jsonResp.Result, false
+	}
+	return 0, true
+}
+
+type GetPoWBlockHeaderResult struct {
+	Hash          string `json:"hash"`
+	Confirmations uint64 `json:"confirmations"`
+	Height        uint64 `json:"height"`
+}
+type GetPoWBlockHeaderError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+type GetPoWBlockHeaderResp struct {
+	Result GetPoWBlockHeaderResult `json:"result"`
+	Error  interface{}             `json:"error"`
+}
+
+func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL string, username string, password string) (uint64, bool) {
+	data := GetPoWRequestPayload{
+		Method: "getblockheader",
+		Params: []string{
+			ledgerHash,
+		},
+	}
+	payloadBytes, err := json.Marshal(data)
+	if err != nil {
+		return 0, true
+	}
+	body := bytes.NewReader(payloadBytes)
+	req, err := http.NewRequest("POST", chainURL, body)
+	if err != nil {
+		return 0, true
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if username != "" && password != "" {
+		req.SetBasicAuth(username, password)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, true
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return 0, true
+		}
+		var jsonResp GetPoWBlockHeaderResp
+		err = json.Unmarshal(respBody, &jsonResp)
+		if err != nil {
+			return 0, true
+		}
+		if jsonResp.Error != nil || jsonResp.Result.Confirmations < requiredConfirmations {
+			return 0, false
+		}
+		return jsonResp.Result.Height, false
+	}
+	return 0, true
+}
+
+// =======================================================
 // LTC
 // =======================================================
 
 func ProveClaimPeriodFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
+	if binary.BigEndian.Uint64(checkRet[96:128]) == 0 {
+		return true, false
+	}
+	ledger := binary.BigEndian.Uint64(checkRet[56:64])
+	requiredConfirmations := binary.BigEndian.Uint64(checkRet[94:96])
+	ledgerHashString := hex.EncodeToString(checkRet[96:128])
+	blockCount, err := GetPoWBlockCount(chainURL, LTC_USERNAME, LTC_PASSWORD)
+	if err {
+		return false, true
+	}
+	if blockCount < ledger+requiredConfirmations {
+		return false, true
+	}
+	ledgerResp, err := GetPoWBlockHeader(ledgerHashString, requiredConfirmations, chainURL, LTC_USERNAME, LTC_PASSWORD)
+	if err {
+		return false, true
+	} else if ledgerResp > 0 && ledgerResp == ledger {
+		return true, false
+	} else {
+		return false, false
+	}
 }
 
 func ProvePaymentFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {

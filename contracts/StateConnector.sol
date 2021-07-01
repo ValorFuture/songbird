@@ -75,7 +75,7 @@ contract StateConnector {
     function initialiseChains() public returns (bool success) {
         require(!initialised, 'initialised != false');
         governanceContract = 0xfffEc6C83c8BF5c3F4AE0cCF8c45CE20E4560BD7;
-        chains[0] = Chain(true, 62880000, 0, 30, 0, 0, 62880000, block.timestamp, 120, 0); //XRP
+        chains[0] = Chain(true, 64583400, 0, 30, 0, 0, 64583400, block.timestamp, 120, 0); //XRP
         chains[1] = Chain(true, 2069000, 0, 1, 12, 0, 2069000, block.timestamp, 150, 0); //LTC
         chains[2] = Chain(true, 35863000, 0, 20, 0, 0, 35863000, block.timestamp, 120, 0); //XLM
         chains[3] = Chain(true, 3768500, 0, 2, 40, 0, 3768500, block.timestamp, 120, 0); //DOGE
