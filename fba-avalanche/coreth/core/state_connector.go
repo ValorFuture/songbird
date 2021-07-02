@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,10 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 )
-
-const LTC_USERNAME = ""
-
-const LTC_PASSWORD = ""
 
 func GetMinReserve(blockNumber *big.Int) *big.Int {
 	switch {
@@ -502,25 +499,21 @@ func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL
 	return 0, true
 }
 
-// =======================================================
-// LTC
-// =======================================================
-
-func ProveClaimPeriodFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+func ProveClaimPeriodFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
 	if binary.BigEndian.Uint64(checkRet[96:128]) == 0 {
 		return true, false
 	}
 	ledger := binary.BigEndian.Uint64(checkRet[56:64])
 	requiredConfirmations := binary.BigEndian.Uint64(checkRet[94:96])
 	ledgerHashString := hex.EncodeToString(checkRet[96:128])
-	blockCount, err := GetPoWBlockCount(chainURL, LTC_USERNAME, LTC_PASSWORD)
+	blockCount, err := GetPoWBlockCount(chainURL, username, password)
 	if err {
 		return false, true
 	}
 	if blockCount < ledger+requiredConfirmations {
 		return false, true
 	}
-	ledgerResp, err := GetPoWBlockHeader(ledgerHashString, requiredConfirmations, chainURL, LTC_USERNAME, LTC_PASSWORD)
+	ledgerResp, err := GetPoWBlockHeader(ledgerHashString, requiredConfirmations, chainURL, username, password)
 	if err {
 		return false, true
 	} else if ledgerResp > 0 && ledgerResp == ledger {
@@ -530,28 +523,40 @@ func ProveClaimPeriodFinalityLTC(checkRet []byte, chainURL string) (bool, bool) 
 	}
 }
 
-func ProvePaymentFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+func ProvePaymentFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
 	return true, false
 }
 
-func DisprovePaymentFinalityLTC(checkRet []byte, chainURL string) (bool, bool) {
+func DisprovePaymentFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
 	return true, false
 }
 
-func ProveLTC(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
+func ProvePoW(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, currencyCode string, chainURL string) (bool, bool) {
+	var username, password string
+	switch currencyCode {
+	case "btc":
+		username = os.Getenv("BTC_USERNAME_" + chainURL)
+		password = os.Getenv("BTC_PASSWORD_" + chainURL)
+	case "ltc":
+		username = os.Getenv("LTC_USERNAME_" + chainURL)
+		password = os.Getenv("LTC_PASSWORD_" + chainURL)
+	case "dog":
+		username = os.Getenv("DOGE_USERNAME_" + chainURL)
+		password = os.Getenv("DOGE_PASSWORD_" + chainURL)
+	}
 	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
 		for _, evmAddress := range strings.Split(evmAddresses, ",") {
 			if len(evmAddress) == 45 {
-				if evmAddress[:3] == "ltc" && common.HexToAddress(evmAddress[3:]) == sender {
-					return ProveClaimPeriodFinalityLTC(checkRet, chainURL)
+				if evmAddress[:3] == currencyCode && common.HexToAddress(evmAddress[3:]) == sender {
+					return ProveClaimPeriodFinalityPoW(checkRet, chainURL, username, password)
 				}
 			}
 		}
 		return false, false
 	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
-		return ProvePaymentFinalityLTC(checkRet, chainURL)
+		return ProvePaymentFinalityPoW(checkRet, chainURL, username, password)
 	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
-		return DisprovePaymentFinalityLTC(checkRet, chainURL)
+		return DisprovePaymentFinalityPoW(checkRet, chainURL, username, password)
 	}
 	return false, false
 }
@@ -591,67 +596,43 @@ func ProveXLM(sender common.Address, blockNumber *big.Int, functionSelector []by
 }
 
 // =======================================================
-// DOGE
-// =======================================================
-
-func ProveClaimPeriodFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
-}
-
-func ProvePaymentFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
-}
-
-func DisprovePaymentFinalityDOGE(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
-}
-
-func ProveDOGE(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
-	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
-		for _, evmAddress := range strings.Split(evmAddresses, ",") {
-			if len(evmAddress) == 45 {
-				if evmAddress[:3] == "dog" && common.HexToAddress(evmAddress[3:]) == sender {
-					return ProveClaimPeriodFinalityDOGE(checkRet, chainURL)
-				}
-			}
-		}
-		return false, false
-	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
-		return ProvePaymentFinalityDOGE(checkRet, chainURL)
-	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
-		return DisprovePaymentFinalityDOGE(checkRet, chainURL)
-	}
-	return false, false
-}
-
-// =======================================================
 // Common
 // =======================================================
 
 func ProveChain(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, chainId uint32, evmAddresses string, chainURL string) (bool, bool) {
 	switch chainId {
 	case 0:
-		return ProveXRP(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+		return ProvePoW(sender, blockNumber, functionSelector, checkRet, evmAddresses, "btc", chainURL)
 	case 1:
-		return ProveLTC(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+		return ProvePoW(sender, blockNumber, functionSelector, checkRet, evmAddresses, "ltc", chainURL)
 	case 2:
-		return ProveXLM(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+		return ProvePoW(sender, blockNumber, functionSelector, checkRet, evmAddresses, "dog", chainURL)
 	case 3:
-		return ProveDOGE(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+		return ProveXRP(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
+	case 4:
+		return ProveXLM(sender, blockNumber, functionSelector, checkRet, evmAddresses, chainURL)
 	default:
 		return false, true
 	}
 }
 
-func ReadChain(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, alertURLs string, evmAddresses string, chainURLs []string) bool {
+func ReadChain(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string) bool {
 	chainId := binary.BigEndian.Uint32(checkRet[28:32])
-	if uint32(len(chainURLs)) <= chainId {
-		// This is already checked at avalanchego/main/params.go on launch, but a fail-safe
-		// is included here regardless for increased coverage
-		return false
+	var chainURLs string
+	switch chainId {
+	case 0:
+		chainURLs = os.Getenv("BTC_APIs")
+	case 1:
+		chainURLs = os.Getenv("LTC_APIs")
+	case 2:
+		chainURLs = os.Getenv("DOGE_APIs")
+	case 3:
+		chainURLs = os.Getenv("XRP_APIs")
+	case 4:
+		chainURLs = os.Getenv("LTC_APIs")
 	}
 	for {
-		for _, chainURL := range strings.Split(chainURLs[chainId], ",") {
+		for _, chainURL := range strings.Split(chainURLs, ",") {
 			if chainURL != "" {
 				verified, err := ProveChain(sender, blockNumber, functionSelector, checkRet, chainId, evmAddresses, chainURL)
 				if !verified && err {
@@ -661,6 +642,7 @@ func ReadChain(sender common.Address, blockNumber *big.Int, functionSelector []b
 				}
 			}
 		}
+		// Check for an update to URLs or authentication here via file
 		time.Sleep(1 * time.Second)
 	}
 	return false
@@ -668,5 +650,5 @@ func ReadChain(sender common.Address, blockNumber *big.Int, functionSelector []b
 
 // Verify proof against underlying chain
 func StateConnectorCall(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, stateConnectorConfig []string) bool {
-	return ReadChain(sender, blockNumber, functionSelector, checkRet, stateConnectorConfig[2], stateConnectorConfig[3], stateConnectorConfig[4:])
+	return ReadChain(sender, blockNumber, functionSelector, checkRet, stateConnectorConfig[2])
 }

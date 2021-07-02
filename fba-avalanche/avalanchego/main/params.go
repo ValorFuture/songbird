@@ -245,10 +245,6 @@ func avalancheFlagSet() *flag.FlagSet {
 	fs.Bool(indexEnabledKey, false, "If true, index all accepted containers and transactions and expose them via an API")
 	fs.Bool(indexAllowIncompleteKey, false, "If true, allow running the node in such a way that could cause an index to miss transactions. Ignored if index is disabled.")
 
-	// Alert APIs
-	fs.String(alertAPIsKey, defaultString, "Comma-delimited list of API(s) to use for alerting this validator's administrator in the event of a problem with the state connector system.")
-	// XRP APIs
-	fs.String(xrpAPIsKey, defaultString, "Comma-delimited list of API(s) to use for attaching the state connector system to the XRP Ledger.")
 	// Unique Node List:
 	fs.String(validatorsFileKey, defaultString, "JSON file containing Node-IDs and their probability weighting of being sampled during consensus.")
 
@@ -735,18 +731,6 @@ func setNodeConfig(v *viper.Viper) error {
 	// Peer alias
 	Config.PeerAliasTimeout = v.GetDuration(peerAliasTimeoutKey)
 
-	// State Connector APIs
-	alertAPIsString := v.GetString(alertAPIsKey)
-	if alertAPIsString == defaultString {
-		return fmt.Errorf("alert-apis not specified")
-	}
-	alertAPIsString = strings.ReplaceAll(alertAPIsString, " ", "")
-	xrpAPIsString := v.GetString(xrpAPIsKey)
-	if xrpAPIsString == defaultString {
-		return fmt.Errorf("xrp-apis not specified")
-	}
-	xrpAPIsString = strings.ReplaceAll(xrpAPIsString, " ", "")
-
 	if string(Config.DBPath[0]) != "/" {
 		return fmt.Errorf("incomplete db path, append $(pwd)/ as prefix to --db-dir flag input")
 	}
@@ -794,7 +778,7 @@ func setNodeConfig(v *viper.Viper) error {
 	}
 
 	Config.ValidatorConfig = validators
-	Config.CorethConfig = corethAPIstate + " " + strconv.FormatUint(validators.StartTime+validators.IntervalTime, 10) + " " + validatorTimeBoundPath + " " + alertAPIsString + " " + evmAddresses + " " + xrpAPIsString
+	Config.CorethConfig = corethAPIstate + " " + strconv.FormatUint(validators.StartTime+validators.IntervalTime, 10) + " " + validatorTimeBoundPath + " " + evmAddresses
 	return nil
 }
 

@@ -109,6 +109,4 @@ const (
 	retryBootstrapMaxAttempts               = "bootstrap-retry-max-attempts"
 	peerAliasTimeoutKey                     = "peer-alias-timeout"
 	validatorsFileKey                       = "validators-file"
-	alertAPIsKey                            = "alert-apis"
-	xrpAPIsKey                              = "xrp-apis"
 )
