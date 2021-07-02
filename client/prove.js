@@ -32,9 +32,6 @@ var config,
 // XRPL Specific Functions
 // ===============================================================
 
-const RippleAPI = require('ripple-lib').RippleAPI;
-const RippleKeys = require('ripple-keypairs');
-
 async function xrplProcessLedger(currLedger, leaf) {
 	console.log('Retrieving XRPL state hash from ledger:', currLedger);
 	const command = 'ledger';

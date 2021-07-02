@@ -51,7 +51,7 @@ async function postData(url = '', data = {}) {
 async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
 	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1);
 	const currLedger = genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1;
-	const command = 'ledger';
+	const method = 'ledger';
 	const params = [{
 		'ledger_index': currLedger,
 		'binary': false,
@@ -61,7 +61,7 @@ async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLen
 		'expand': false,
 		'owner_funds': false
 	}];
-	postData('https://xrpl.flare.network:443', { method: command, params: params })
+	postData(config.chains.xrp.api, {method: method, params: params})
 	.then(data => {
 		return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex+1)*claimPeriodLength, claimPeriodIndex, web3.utils.sha3(data.result.ledger_hash), isCommit);
 	})
@@ -77,11 +77,10 @@ async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLen
 async function run(chainId, minLedger) {
 	console.log('\n\x1b[34mState Connector System connected at', Date(Date.now()).toString(), '\x1b[0m' );
 	stateConnector.methods.getLatestIndex(parseInt(chainId)).call().catch(initialiseChains)
-	.then(result => {
-		if (result != undefined) {
+	.then(getLatestIndexResult => {
+		if (getLatestIndexResult != undefined) {
 			if (chainId == 3) {
-				// chains.xrp.api.getLedgerVersion().catch(processFailure)
-				const command = 'ledger';
+				const method = 'ledger';
 				const params = [{
 					'ledger_index': "validated",
 					'binary': false,
@@ -91,47 +90,65 @@ async function run(chainId, minLedger) {
 					'expand': false,
 					'owner_funds': false
 				}];
-				postData('https://xrpl.flare.network:443', { method: command, params: params })
+				postData(config.chains.xrp.api, {method: method, params: params})
 				.then(data => {
-					console.log("Finalised claim period:\t\x1b[33m", parseInt(result.finalisedClaimPeriodIndex)-1, 
-						"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(result.finalisedLedgerIndex),
-						"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", data.result.ledger_index,
-						"\n\x1b[0mFinalised Timestamp:\t\x1b[33m", parseInt(result.finalisedTimestamp),
-						"\n\x1b[0mCurrent Timestamp:\t\x1b[33m", parseInt(Date.now()/1000),
-						"\n\x1b[0mDiff Avg (sec):\t\t\x1b[33m", parseInt(result.timeDiffAvg));
-					const currTime = parseInt(Date.now()/1000);
-					var deferTime;
-					if (parseInt(result.finalisedTimestamp) > 0) {
-						// Time to commit the proof
-						if (parseInt(result.timeDiffAvg) < 60) {
-							deferTime = parseInt(2*parseInt(result.timeDiffAvg)/3 - (currTime-parseInt(result.finalisedTimestamp)));
-						} else {
-							deferTime = parseInt(parseInt(result.timeDiffAvg) - (currTime-parseInt(result.finalisedTimestamp)) - 15);
-						}
-						if (deferTime > 0) {
-							console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
-							return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
-						} else if (data.result.ledger_index >= parseInt(result.genesisLedger) + (parseInt(result.finalisedClaimPeriodIndex)+1)*parseInt(result.claimPeriodLength)) {
-							return xrplProcessLedger(parseInt(result.genesisLedger), parseInt(result.finalisedClaimPeriodIndex), parseInt(result.claimPeriodLength), true);
-						} else {
-							return xrplClaimProcessingCompleted('Reached latest state, waiting for new ledgers.');
-						}
-					} else {
-						// Time to reveal the proof
-						if (currTime > parseInt(result.timeDiffAvg)) {
-							return xrplProcessLedger(parseInt(result.genesisLedger), parseInt(result.finalisedClaimPeriodIndex), parseInt(result.claimPeriodLength), false);
-						} else {
-							deferTime = parseInt(result.timeDiffAvg)-currTime;
-							console.log("Not enough time elapsed since proof commit, deferring for", deferTime, "seconds.");
-							return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
-						}
-					}
+					return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
 				})
 			} else {
 				return processFailure('Invalid chainId.');
 			}
 		}	
 	})
+}
+
+async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, currentLedger) {
+	const currTime = parseInt(Date.now()/1000);
+	var deferTime;
+	console.log("Finalised claim period:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedClaimPeriodIndex)-1, 
+		"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedLedgerIndex),
+		"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", currentLedger);
+	if (getLatestIndexResult.finalisedTimestamp > 0) {
+		console.log("\x1b[0mFinalised Timestamp:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedTimestamp),
+			"\n\x1b[0mCurrent Timestamp:\t\x1b[33m", currTime,
+			"\n\x1b[0mDiff Avg (sec):\t\t\x1b[33m", parseInt(getLatestIndexResult.timeDiffAvg));
+	} else {
+		console.log("\x1b[0mCurrent Timestamp:\t\x1b[33m", currTime,
+			"\n\x1b[0mPermitted Reveal Time:\t\x1b[33m", parseInt(getLatestIndexResult.timeDiffAvg));
+	}
+	if (parseInt(getLatestIndexResult.finalisedTimestamp) > 0) {
+		// Time to commit the proof
+		if (parseInt(getLatestIndexResult.timeDiffAvg) < 60) {
+			deferTime = parseInt(2*parseInt(getLatestIndexResult.timeDiffAvg)/3 - (currTime-parseInt(getLatestIndexResult.finalisedTimestamp)));
+		} else {
+			deferTime = parseInt(parseInt(getLatestIndexResult.timeDiffAvg) - (currTime-parseInt(getLatestIndexResult.finalisedTimestamp)) - 15);
+		}
+		if (deferTime > 0) {
+			console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
+			return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
+		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex)+1)*parseInt(getLatestIndexResult.claimPeriodLength)) {
+			if (chainId == 3) {
+				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
+			} else {
+				return processFailure('Invalid chainId.');
+			}
+		} else {
+			console.log('Reached latest state, waiting for new ledgers.');
+			setTimeout(() => {return process.exit()}, 5000);
+		}
+	} else {
+		// Time to reveal the proof
+		if (currTime > parseInt(getLatestIndexResult.timeDiffAvg)) {
+			if (chainId == 3) {
+				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), false);
+			} else {
+				return processFailure('Invalid chainId.');
+			}
+		} else {
+			deferTime = parseInt(getLatestIndexResult.timeDiffAvg)-currTime;
+			console.log("Not enough time elapsed since proof commit, deferring for", deferTime, "seconds.");
+			return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
+		}
+	}
 }
 
 async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, isCommit) {
@@ -260,7 +277,6 @@ async function configure(chainId) {
 		'petersburg',);
 	web3.eth.getBalance(config.accounts[0].address)
 	.then(balance => {
-		console.log(balance);
 		if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000000) {
 			console.log("Not enough FLR reserved in your account, need 1M FLR.");
 			sleep(5000);

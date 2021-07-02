@@ -9,12 +9,11 @@
       "privateKey": "d77b743a0b9170c230e4a4be446b8605aa45f1d00da3d8cd5e5f778c287e1f22"
     }
   ],
-  "chains": [
-    {
-      "name": "XRPL",
-      "url": "wss://xrplcluster.com"
+  "chains": {
+    "xrp": {
+      "api": "https://xrpl.flare.network:443"
     }
-  ],
+  },
   "flare": {
     "gas": "8000000",
     "gasPrice": "225000000000",
