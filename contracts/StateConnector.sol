@@ -220,6 +220,7 @@ contract StateConnector {
             require(chains[chainId].finalisedLedgerIndex - ledger < chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - ledger >= chains[chainId].ledgerHistorySize');
             indexSearchRegion = chains[chainId].finalisedLedgerIndex - chains[chainId].ledgerHistorySize;
         }
+        require(ledger >= indexSearchRegion, 'ledger < indexSearchRegion');
         require(block.coinbase == msg.sender || block.coinbase == address(0x0100000000000000000000000000000000000000), 'invalid block.coinbase value');
         if (block.coinbase == msg.sender && block.coinbase != address(0x0100000000000000000000000000000000000000)) {
         	finalisedPayments[chainId][txIdHash] = HashExists(true, 0x0, 0, block.timestamp, paymentHash, ledger, indexSearchRegion, true);
@@ -239,6 +240,7 @@ contract StateConnector {
             require(chains[chainId].finalisedLedgerIndex - ledger < chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - ledger >= chains[chainId].ledgerHistorySize');
             indexSearchRegion = chains[chainId].finalisedLedgerIndex - chains[chainId].ledgerHistorySize;
         }
+        require(ledger >= indexSearchRegion, 'ledger < indexSearchRegion');
         require(block.coinbase == msg.sender || block.coinbase == address(0x0100000000000000000000000000000000000000), 'invalid block.coinbase value');
         if (block.coinbase == msg.sender && block.coinbase != address(0x0100000000000000000000000000000000000000)) {
         	finalisedPayments[chainId][txIdHash] = HashExists(true, 0x0, 0, block.timestamp, paymentHash, ledger, indexSearchRegion, false);

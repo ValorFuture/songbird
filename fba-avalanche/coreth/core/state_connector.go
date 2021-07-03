@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +43,7 @@ func GetKeeperGasMultiplier(blockNumber *big.Int) uint64 {
 func GetMaxAllowedChains(blockNumber *big.Int) uint32 {
 	switch {
 	default:
-		return 4
+		return 5
 	}
 }
 
@@ -223,19 +222,18 @@ type GetXRPTxRequestPayload struct {
 	Method string                  `json:"method"`
 	Params []GetXRPTxRequestParams `json:"params"`
 }
-type TxMetaData struct {
-	Amount interface{} `json:delivered_amount`
-}
 type GetXRPTxResponse struct {
-	Account         string     `json:"Account"`
-	Destination     string     `json:"Destination"`
-	DestinationTag  int        `json:"DestinationTag"`
-	TransactionType string     `json:"TransactionType"`
-	Hash            string     `json:"hash"`
-	InLedger        int        `json:"inLedger"`
-	Flags           int        `json:"Flags"`
-	Validated       bool       `json:"validated"`
-	Meta            TxMetaData `json:"meta"`
+	Account         string `json:"Account"`
+	Destination     string `json:"Destination"`
+	DestinationTag  int    `json:"DestinationTag"`
+	TransactionType string `json:"TransactionType"`
+	Hash            string `json:"hash"`
+	InLedger        int    `json:"inLedger"`
+	Validated       bool   `json:"validated"`
+	Meta            struct {
+		TransactionResult string      `json:"TransactionResult"`
+		Amount            interface{} `json:"delivered_amount"`
+	} `json:"meta"`
 }
 
 type GetXRPTxIssuedCurrency struct {
@@ -298,21 +296,19 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 		if err != nil {
 			return []byte{}, 0, false
 		}
-		if jsonResp["result"].TransactionType == "Payment" {
+		if jsonResp["result"].TransactionType == "Payment" && jsonResp["result"].Validated && jsonResp["result"].Meta.TransactionResult == "tesSUCCESS" {
 			inLedger := uint64(jsonResp["result"].InLedger)
 			if inLedger > 0 && inLedger < latestAvailableLedger && jsonResp["result"].Validated {
-				var amount uint64
-				amountInterface := jsonResp["result"].Meta.Amount
-				amountType := reflect.TypeOf(amountInterface)
 				var currency string
-				if amountType.Name() == "string" {
-					amount, err = strconv.ParseUint(jsonResp["result"].Meta.Amount.(string), 10, 64)
+				var amount uint64
+				if stringAmount, ok := jsonResp["result"].Meta.Amount.(string); ok {
+					amount, err = strconv.ParseUint(stringAmount, 10, 64)
 					if err != nil {
 						return []byte{}, 0, false
 					}
 					currency = "XRP"
 				} else {
-					amountStruct, err := json.Marshal(amountInterface)
+					amountStruct, err := json.Marshal(jsonResp["result"].Meta.Amount)
 					if err != nil {
 						return []byte{}, 0, false
 					}
@@ -321,12 +317,10 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 					if err != nil {
 						return []byte{}, 0, false
 					}
-					amountBigFloat, _, err := big.ParseFloat(issuedCurrencyResp.Value, 10, 256, big.ToZero)
+					amount, err = strconv.ParseUint(issuedCurrencyResp.Value, 10, 64)
 					if err != nil {
 						return []byte{}, 0, false
 					}
-					amountBigFloat.Mul(amountBigFloat, big.NewFloat(float64(1000000)))
-					amount, _ = amountBigFloat.Uint64()
 					currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
 				}
 				txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))

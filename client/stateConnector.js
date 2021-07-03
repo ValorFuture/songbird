@@ -1,5 +1,3 @@
-'use strict';
-process.env.NODE_ENV = 'production';
 const Web3 = require('web3');
 const web3 = new Web3();
 const Tx = require('ethereumjs-tx').Transaction;
@@ -35,22 +33,22 @@ var active,
 
 async function postData(url = '', data = {}) {
 	const response = await fetch(url, {
-	  method: 'POST',
-	  headers: {
-		'Content-Type': 'application/json'
-	  },
-	  body: JSON.stringify(data)
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(data)
 	});
 	return response.json();
-  }
+}
 
 // ===============================================================
 // XRP Specific Items
 // ===============================================================
 
 async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
-	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1);
-	const currLedger = genesisLedger + (claimPeriodIndex+1)*claimPeriodLength - 1;
+	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
+	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
 	const method = 'ledger';
 	const params = [{
 		'ledger_index': currLedger,
@@ -61,50 +59,50 @@ async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLen
 		'expand': false,
 		'owner_funds': false
 	}];
-	postData(config.chains.xrp.api, {method: method, params: params})
-	.then(data => {
-		return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex+1)*claimPeriodLength, claimPeriodIndex, web3.utils.sha3(data.result.ledger_hash), isCommit);
-	})
-	.catch(error => {
-		processFailure(error);
-	})
+	postData(config.chains.xrp.api, { method: method, params: params })
+		.then(data => {
+			return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, web3.utils.sha3(data.result.ledger_hash), isCommit);
+		})
+		.catch(error => {
+			processFailure(error);
+		})
 }
 
 // ===============================================================
-// Chain Invariant Functions
+// Chain Common Functions
 // ===============================================================
 
 async function run(chainId, minLedger) {
-	console.log('\n\x1b[34mState Connector System connected at', Date(Date.now()).toString(), '\x1b[0m' );
+	console.log('\n\x1b[34mState Connector System connected at', Date(Date.now()).toString(), '\x1b[0m');
 	stateConnector.methods.getLatestIndex(parseInt(chainId)).call().catch(initialiseChains)
-	.then(getLatestIndexResult => {
-		if (getLatestIndexResult != undefined) {
-			if (chainId == 3) {
-				const method = 'ledger';
-				const params = [{
-					'ledger_index': "validated",
-					'binary': false,
-					'full': false,
-					'accounts': false,
-					'transactions': false,
-					'expand': false,
-					'owner_funds': false
-				}];
-				postData(config.chains.xrp.api, {method: method, params: params})
-				.then(data => {
-					return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
-				})
-			} else {
-				return processFailure('Invalid chainId.');
+		.then(getLatestIndexResult => {
+			if (getLatestIndexResult != undefined) {
+				if (chainId == 3) {
+					const method = 'ledger';
+					const params = [{
+						'ledger_index': "validated",
+						'binary': false,
+						'full': false,
+						'accounts': false,
+						'transactions': false,
+						'expand': false,
+						'owner_funds': false
+					}];
+					postData(config.chains.xrp.api, { method: method, params: params })
+						.then(data => {
+							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
+						})
+				} else {
+					return processFailure('Invalid chainId.');
+				}
 			}
-		}	
-	})
+		})
 }
 
 async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, currentLedger) {
-	const currTime = parseInt(Date.now()/1000);
+	const currTime = parseInt(Date.now() / 1000);
 	var deferTime;
-	console.log("Finalised claim period:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedClaimPeriodIndex)-1, 
+	console.log("Finalised claim period:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) - 1,
 		"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedLedgerIndex),
 		"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", currentLedger);
 	if (getLatestIndexResult.finalisedTimestamp > 0) {
@@ -118,14 +116,14 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 	if (parseInt(getLatestIndexResult.finalisedTimestamp) > 0) {
 		// Time to commit the proof
 		if (parseInt(getLatestIndexResult.timeDiffAvg) < 60) {
-			deferTime = parseInt(2*parseInt(getLatestIndexResult.timeDiffAvg)/3 - (currTime-parseInt(getLatestIndexResult.finalisedTimestamp)));
+			deferTime = parseInt(2 * parseInt(getLatestIndexResult.timeDiffAvg) / 3 - (currTime - parseInt(getLatestIndexResult.finalisedTimestamp)));
 		} else {
-			deferTime = parseInt(parseInt(getLatestIndexResult.timeDiffAvg) - (currTime-parseInt(getLatestIndexResult.finalisedTimestamp)) - 15);
+			deferTime = parseInt(parseInt(getLatestIndexResult.timeDiffAvg) - (currTime - parseInt(getLatestIndexResult.finalisedTimestamp)) - 15);
 		}
 		if (deferTime > 0) {
 			console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
-			return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
-		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex)+1)*parseInt(getLatestIndexResult.claimPeriodLength)) {
+			return setTimeout(() => { run(chainId, minLedger) }, 1000 * (deferTime + 1));
+		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength)) {
 			if (chainId == 3) {
 				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
 			} else {
@@ -133,7 +131,7 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 			}
 		} else {
 			console.log('Reached latest state, waiting for new ledgers.');
-			setTimeout(() => {return process.exit()}, 5000);
+			setTimeout(() => { return process.exit() }, 5000);
 		}
 	} else {
 		// Time to reveal the proof
@@ -144,122 +142,122 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 				return processFailure('Invalid chainId.');
 			}
 		} else {
-			deferTime = parseInt(getLatestIndexResult.timeDiffAvg)-currTime;
+			deferTime = parseInt(getLatestIndexResult.timeDiffAvg) - currTime;
 			console.log("Not enough time elapsed since proof commit, deferring for", deferTime, "seconds.");
-			return setTimeout(() => {run(chainId, minLedger)}, 1000*(deferTime+1));
+			return setTimeout(() => { run(chainId, minLedger) }, 1000 * (deferTime + 1));
 		}
 	}
 }
 
 async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, isCommit) {
 	stateConnector.methods.getClaimPeriodIndexFinality(
-					parseInt(chainId),
-					claimPeriodIndex).call({
-		from: config.accounts[0].address,
-		gas: config.flare.gas,
-		gasPrice: config.flare.gasPrice
-	}).catch(processFailure)
-	.then(result => {
-		console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
-		if (result == true) {
-			if (chainId == 3) {
-				console.log('This claim period already registered.');
-				setTimeout(() => {return process.exit()}, 5000);
-			} else {
-				return processFailure('Invalid chainId.');
-			}
-		} else {
-			web3.eth.getTransactionCount(config.accounts[0].address)
-			.then(nonce => {
-				if (isCommit) {
-					return [stateConnector.methods.proveClaimPeriodFinality(
-						chainId,
-						ledger,
-						claimPeriodIndex,
-						web3.utils.soliditySha3(config.accounts[0].address, claimPeriodHash)).encodeABI(), nonce];
+		parseInt(chainId),
+		claimPeriodIndex).call({
+			from: config.accounts[0].address,
+			gas: config.flare.gas,
+			gasPrice: config.flare.gasPrice
+		}).catch(processFailure)
+		.then(result => {
+			console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
+			if (result == true) {
+				if (chainId == 3) {
+					console.log('This claim period already registered.');
+					setTimeout(() => { return process.exit() }, 5000);
 				} else {
-					return [stateConnector.methods.proveClaimPeriodFinality(
-						chainId,
-						ledger,
-						claimPeriodIndex,
-						claimPeriodHash).encodeABI(), nonce];
+					return processFailure('Invalid chainId.');
 				}
-			})
-			.then(txData => {
-				var rawTx = {
-					nonce: txData[1],
-					gasPrice: web3.utils.toHex(parseInt(config.flare.gasPrice)),
-					gas: web3.utils.toHex(config.flare.gas),
-					to: stateConnector.options.address,
-					from: config.accounts[0].address,
-					data: txData[0]
-				};
-				var tx = new Tx(rawTx, {common: customCommon});
-				var key = Buffer.from(config.accounts[0].privateKey, 'hex');
-				tx.sign(key);
-				var serializedTx = tx.serialize();
-				const txHash = web3.utils.sha3(serializedTx);
+			} else {
+				web3.eth.getTransactionCount(config.accounts[0].address)
+					.then(nonce => {
+						if (isCommit) {
+							return [stateConnector.methods.proveClaimPeriodFinality(
+								chainId,
+								ledger,
+								claimPeriodIndex,
+								web3.utils.soliditySha3(config.accounts[0].address, claimPeriodHash)).encodeABI(), nonce];
+						} else {
+							return [stateConnector.methods.proveClaimPeriodFinality(
+								chainId,
+								ledger,
+								claimPeriodIndex,
+								claimPeriodHash).encodeABI(), nonce];
+						}
+					})
+					.then(txData => {
+						var rawTx = {
+							nonce: txData[1],
+							gasPrice: web3.utils.toHex(parseInt(config.flare.gasPrice)),
+							gas: web3.utils.toHex(config.flare.gas),
+							to: stateConnector.options.address,
+							from: config.accounts[0].address,
+							data: txData[0]
+						};
+						var tx = new Tx(rawTx, { common: customCommon });
+						var key = Buffer.from(config.accounts[0].privateKey, 'hex');
+						tx.sign(key);
+						var serializedTx = tx.serialize();
+						const txHash = web3.utils.sha3(serializedTx);
 
-				console.log('Delivering transaction:\t\x1b[33m', txHash, '\x1b[0m');
-				web3.eth.getTransaction(txHash)
-				.then(txResult => {
-					if (txResult == null) {
-						web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-						.on('receipt', receipt => {
-							if (receipt.status == false) {
-								return processFailure('receipt.status == false');
-							} else {
-								console.log('Transaction delivered:\t \x1b[33m' + receipt.transactionHash + '\x1b[0m');
-								return setTimeout(() => {run(chainId, ledger)}, 5000);
-							}
-						})
-						.on('error', error => {
-							return processFailure(error);
-						});
-					} else {
-						console.log('Already waiting for this transaction to be delivered.');
-						setTimeout(() => {return process.exit()}, 5000);
-					}
-				})
-			})
-		}
-	})
+						console.log('Delivering transaction:\t\x1b[33m', txHash, '\x1b[0m');
+						web3.eth.getTransaction(txHash)
+							.then(txResult => {
+								if (txResult == null) {
+									web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+										.on('receipt', receipt => {
+											if (receipt.status == false) {
+												return processFailure('receipt.status == false');
+											} else {
+												console.log('Transaction delivered:\t \x1b[33m' + receipt.transactionHash + '\x1b[0m');
+												return setTimeout(() => { run(chainId, ledger) }, 5000);
+											}
+										})
+										.on('error', error => {
+											return processFailure(error);
+										});
+								} else {
+									console.log('Already waiting for this transaction to be delivered.');
+									setTimeout(() => { return process.exit() }, 5000);
+								}
+							})
+					})
+			}
+		})
 }
 
 async function initialiseChains() {
 	console.log('Initialising chains');
 	web3.eth.getTransactionCount(config.accounts[0].address)
-	.then(nonce => {
-		return [stateConnector.methods.initialiseChains().encodeABI(), nonce];
-	})
-	.then(contractData => {
-		var rawTx = {
-			nonce: contractData[1],
-			gasPrice: web3.utils.toHex(config.flare.gasPrice),
-			gas: web3.utils.toHex(config.flare.gas),
-			chainId: config.flare.chainId,
-			from: config.accounts[0].address,
-			to: stateConnector.options.address,
-			data: contractData[0]
-		}
-		var tx = new Tx(rawTx, {common: customCommon});
-		var key = Buffer.from(config.accounts[0].privateKey, 'hex');
-		tx.sign(key);
-		var serializedTx = tx.serialize();
-		
-		web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-		.on('receipt', receipt => {
-			if (receipt.status == false) {
-				return processFailure('receipt.status == false');
-			} else {
-				console.log("State-connector chains initialised.");
-				setTimeout(() => {return process.exit()}, 5000);
-			}
+		.then(nonce => {
+			return [stateConnector.methods.initialiseChains().encodeABI(), nonce];
 		})
-		.on('error', error => {
-			processFailure(error);
-		});
-	}).catch(processFailure);
+		.then(contractData => {
+			var rawTx = {
+				nonce: contractData[1],
+				gasPrice: web3.utils.toHex(config.flare.gasPrice),
+				gas: web3.utils.toHex(config.flare.gas),
+				chainId: config.flare.chainId,
+				from: config.accounts[0].address,
+				to: stateConnector.options.address,
+				data: contractData[0]
+			}
+			var tx = new Tx(rawTx, { common: customCommon });
+			var key = Buffer.from(config.accounts[0].privateKey, 'hex');
+			tx.sign(key);
+			var serializedTx = tx.serialize();
+
+			web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+				.on('receipt', receipt => {
+					if (receipt.status == false) {
+						return processFailure('receipt.status == false');
+					} else {
+						console.log("State-connector chains initialised.");
+						setTimeout(() => { return process.exit() }, 5000);
+					}
+				})
+				.on('error', error => {
+					processFailure(error);
+				});
+		}).catch(processFailure);
 }
 
 async function configure(chainId) {
@@ -274,31 +272,31 @@ async function configure(chainId) {
 			networkId: config.flare.chainId,
 			chainId: config.flare.chainId,
 		},
-		'petersburg',);
+		'petersburg');
 	web3.eth.getBalance(config.accounts[0].address)
-	.then(balance => {
-		if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000000) {
-			console.log("Not enough FLR reserved in your account, need 1M FLR.");
-			sleep(5000);
-			process.exit();
-		} else {
-			// Read the compiled contract code
-			let source = fs.readFileSync("../bin/contracts/StateConnector.json");
-			let contract = JSON.parse(source);
-			// Create Contract proxy class
-			stateConnector = new web3.eth.Contract(contract.abi);
-			// Smart contract EVM bytecode as hex
-			stateConnector.options.data = '0x' + contract.deployedBytecode;
-			stateConnector.options.from = config.accounts[0].address;
-			stateConnector.options.address = stateConnectorContract;
-			return run(chainId, 0);
-		}
-	})
+		.then(balance => {
+			if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000000) {
+				console.log("Not enough FLR reserved in your account, need 1M FLR.");
+				sleep(5000);
+				process.exit();
+			} else {
+				// Read the compiled contract code
+				let source = fs.readFileSync("../bin/contracts/StateConnector.json");
+				let contract = JSON.parse(source);
+				// Create Contract proxy class
+				stateConnector = new web3.eth.Contract(contract.abi);
+				// Smart contract EVM bytecode as hex
+				stateConnector.options.data = '0x' + contract.deployedBytecode;
+				stateConnector.options.from = config.accounts[0].address;
+				stateConnector.options.address = stateConnectorContract;
+				return run(chainId, 0);
+			}
+		})
 }
 
 async function processFailure(error) {
 	console.error('error:', error);
-	setTimeout(() => {return process.exit()}, 2500);
+	setTimeout(() => { return process.exit() }, 2500);
 }
 
 
@@ -308,7 +306,7 @@ async function sleep(ms) {
 	});
 }
 
-setTimeout(() => {return process.exit()}, 600000);
+setTimeout(() => { return process.exit() }, 600000);
 app.get('/', (req, res) => {
 	if ("prove" in req.query) {
 		if (req.query.prove in chains) {
