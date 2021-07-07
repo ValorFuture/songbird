@@ -75,7 +75,7 @@ async function run(chainId) {
 									amount = parseInt(tx.result.meta.delivered_amount);
 								} else {
 									currency = tx.result.meta.delivered_amount.currency + tx.result.meta.delivered_amount.issuer;
-									amount = parseInt(tx.result.meta.delivered_amount.value);
+									amount = parseFloat(tx.result.meta.delivered_amount.value).toFixed(15)*Math.pow(10,15);
 								}
 								console.log('\nchainId: \t\t', '0', '\n',
 									'ledger: \t\t', tx.result.inLedger, '\n',

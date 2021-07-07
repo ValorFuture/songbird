@@ -105,6 +105,14 @@ node prove xrp 8B3FB7F0B5BDAB705FDB152EBA20BF47159898D76812DA80BD367D99206B5C59
 
 Payment info: https://livenet.xrpl.org/transactions/8B3FB7F0B5BDAB705FDB152EBA20BF47159898D76812DA80BD367D99206B5C59
 
+This example proves a BTC issued-currency payment on the XRPL:
+
+```
+node prove xrp 67B3F2CAF2905BC67FEB5417C1C3F9AA941DF8984F1F49EC48D4DCADFAC94418
+```
+
+Payment info: https://livenet.xrpl.org/transactions/67B3F2CAF2905BC67FEB5417C1C3F9AA941DF8984F1F49EC48D4DCADFAC94418
+
 ## Connect a Node to the Coston Testnet
 
 To run your own Flare node and peer it with the Coston testnet launch the following commands after stopping all other instances of the Flare node on your machine:

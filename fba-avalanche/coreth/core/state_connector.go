@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"net/http"
 	"os"
@@ -317,10 +318,11 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 					if err != nil {
 						return []byte{}, 0, false
 					}
-					amount, err = strconv.ParseUint(issuedCurrencyResp.Value, 10, 64)
+					floatAmount, err := strconv.ParseFloat(issuedCurrencyResp.Value, 64)
 					if err != nil {
 						return []byte{}, 0, false
 					}
+					amount = uint64(floatAmount * math.Pow(10, 15))
 					currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
 				}
 				txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))
