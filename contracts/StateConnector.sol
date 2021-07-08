@@ -217,7 +217,6 @@ contract StateConnector {
         uint64 indexSearchRegion = chains[chainId].genesisLedger;
         if (chains[chainId].ledgerHistorySize > 0) {
             require(chains[chainId].finalisedLedgerIndex - chains[chainId].genesisLedger > chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - chains[chainId].genesisLedger <= chains[chainId].ledgerHistorySize');
-            require(chains[chainId].finalisedLedgerIndex - ledger < chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - ledger >= chains[chainId].ledgerHistorySize');
             indexSearchRegion = chains[chainId].finalisedLedgerIndex - chains[chainId].ledgerHistorySize;
         }
         require(ledger >= indexSearchRegion, 'ledger < indexSearchRegion');
@@ -237,7 +236,6 @@ contract StateConnector {
         uint64 indexSearchRegion = chains[chainId].genesisLedger;
         if (chains[chainId].ledgerHistorySize > 0) {
             require(chains[chainId].finalisedLedgerIndex - chains[chainId].genesisLedger > chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - chains[chainId].genesisLedger <= chains[chainId].ledgerHistorySize');
-            require(chains[chainId].finalisedLedgerIndex - ledger < chains[chainId].ledgerHistorySize, 'chains[chainId].finalisedLedgerIndex - ledger >= chains[chainId].ledgerHistorySize');
             indexSearchRegion = chains[chainId].finalisedLedgerIndex - chains[chainId].ledgerHistorySize;
         }
         require(ledger >= indexSearchRegion, 'ledger < indexSearchRegion');

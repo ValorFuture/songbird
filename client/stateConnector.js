@@ -10,19 +10,29 @@ const app = express();
 const stateConnectorContract = "0x1000000000000000000000000000000000000001";
 const chains = {
 	'btc': {
-		chainId: 0
+		chainId: 0,
+		confirmations: 4,
+		timeDiffExpected: 900
 	},
 	'ltc': {
-		chainId: 1
+		chainId: 1,
+		confirmations: 10,
+		timeDiffExpected: 150
 	},
 	'doge': {
-		chainId: 2
+		chainId: 2,
+		confirmations: 40,
+		timeDiffExpected: 120
 	},
 	'xrp': {
-		chainId: 3
+		chainId: 3,
+		confirmations: 0,
+		timeDiffExpected: 120
 	},
 	'xlm': {
-		chainId: 4
+		chainId: 4,
+		confirmations: 0,
+		timeDiffExpected: 120
 	}
 };
 
@@ -43,7 +53,33 @@ async function postData(url = '', data = {}) {
 }
 
 // ===============================================================
-// XRP Specific Items
+// Proof of Work Specific Items
+// ===============================================================
+
+async function powProcessLedger(chainId, genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
+	console.log('\nRetrieving proof of work state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
+	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
+	const method = 'getblockhash';
+	const params = [currLedger];
+	var api;
+	if (chainId == 0) {
+		api = config.chains.btc.api;
+	} else if (chainId == 1) {
+		api = config.chains.ltc.api;
+	} else if (chainId == 2) {
+		api = config.chains.doge.api;
+	}
+	postData(api, { method: method, params: params })
+		.then(data => {
+			return proveClaimPeriodFinality(chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, data.result, isCommit);
+		})
+		.catch(error => {
+			processFailure(error);
+		})
+}
+
+// ===============================================================
+// XRP Specific Functions
 // ===============================================================
 
 async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
@@ -77,7 +113,22 @@ async function run(chainId, minLedger) {
 	stateConnector.methods.getLatestIndex(parseInt(chainId)).call().catch(initialiseChains)
 		.then(getLatestIndexResult => {
 			if (getLatestIndexResult != undefined) {
-				if (chainId == 3) {
+				if (chainId >= 0 && chainId < 3) {
+					const method = 'getblockcount';
+					const params = [];
+					var api;
+					if (chainId == 0) {
+						api = config.chains.btc.api;
+					} else if (chainId == 1) {
+						api = config.chains.ltc.api;
+					} else if (chainId == 2) {
+						api = config.chains.doge.api;
+					}
+					postData(api, { method: method, params: params })
+						.then(data => {
+							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result);
+						})
+				} else if (chainId == 3) {
 					const method = 'ledger';
 					const params = [{
 						'ledger_index': "validated",
@@ -115,7 +166,25 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 	}
 	if (parseInt(getLatestIndexResult.finalisedTimestamp) > 0) {
 		// Time to commit the proof
-		if (parseInt(getLatestIndexResult.timeDiffAvg) < 60) {
+		var confirmations;
+		var timeDiffExpected;
+		if (chainId == 0) {
+			confirmations = chains['btc'].confirmations;
+			timeDiffExpected = chains['btc'].timeDiffExpected;
+		} else if (chainId == 1) {
+			confirmations = chains['ltc'].confirmations;
+			timeDiffExpected = chains['ltc'].timeDiffExpected;
+		} else if (chainId == 2) {
+			confirmations = chains['doge'].confirmations;
+			timeDiffExpected = chains['doge'].timeDiffExpected;
+		} else if (chainId == 3) {
+			confirmations = chains['xrp'].confirmations;
+			timeDiffExpected = chains['xrp'].timeDiffExpected;
+		} else if (chainId == 4) {
+			confirmations = chains['xlm'].confirmations;
+			timeDiffExpected = chains['xlm'].timeDiffExpected;
+		}
+		if (parseInt(getLatestIndexResult.timeDiffAvg) < timeDiffExpected/2) {
 			deferTime = parseInt(2 * parseInt(getLatestIndexResult.timeDiffAvg) / 3 - (currTime - parseInt(getLatestIndexResult.finalisedTimestamp)));
 		} else {
 			deferTime = parseInt(parseInt(getLatestIndexResult.timeDiffAvg) - (currTime - parseInt(getLatestIndexResult.finalisedTimestamp)) - 15);
@@ -123,8 +192,10 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 		if (deferTime > 0) {
 			console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
 			return setTimeout(() => { run(chainId, minLedger) }, 1000 * (deferTime + 1));
-		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength)) {
-			if (chainId == 3) {
+		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength) + confirmations) {
+			if (chainId >= 0 && chainId < 3) {
+				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
+			} else if (chainId == 3) {
 				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
 			} else {
 				return processFailure('Invalid chainId.');
@@ -136,7 +207,9 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 	} else {
 		// Time to reveal the proof
 		if (currTime > parseInt(getLatestIndexResult.timeDiffAvg)) {
-			if (chainId == 3) {
+			if (chainId >= 0 && chainId < 3) {
+				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), false);
+			} else if (chainId == 3) {
 				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), false);
 			} else {
 				return processFailure('Invalid chainId.');
@@ -160,12 +233,8 @@ async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claim
 		.then(result => {
 			console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
 			if (result == true) {
-				if (chainId == 3) {
-					console.log('This claim period already registered.');
-					setTimeout(() => { return process.exit() }, 5000);
-				} else {
-					return processFailure('Invalid chainId.');
-				}
+				console.log('This claim period already registered.');
+				setTimeout(() => { return process.exit() }, 5000);
 			} else {
 				web3.eth.getTransactionCount(config.accounts[0].address)
 					.then(nonce => {

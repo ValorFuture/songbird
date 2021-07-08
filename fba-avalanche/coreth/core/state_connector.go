@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -520,25 +521,27 @@ func ProveClaimPeriodFinalityPoW(checkRet []byte, chainURL string, username stri
 }
 
 func ProvePaymentFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
-	return true, false
+	return false, false
 }
 
 func DisprovePaymentFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
-	return true, false
+	return false, false
 }
 
 func ProvePoW(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, currencyCode string, chainURL string) (bool, bool) {
 	var username, password string
+	chainURLhash := sha256.Sum256([]byte(chainURL))
+	chainURLchecksum := hex.EncodeToString(chainURLhash[0:4])
 	switch currencyCode {
 	case "btc":
-		username = os.Getenv("BTC_USERNAME_" + chainURL)
-		password = os.Getenv("BTC_PASSWORD_" + chainURL)
+		username = os.Getenv("BTC_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("BTC_PASSWORD_" + chainURLchecksum)
 	case "ltc":
-		username = os.Getenv("LTC_USERNAME_" + chainURL)
-		password = os.Getenv("LTC_PASSWORD_" + chainURL)
+		username = os.Getenv("LTC_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("LTC_PASSWORD_" + chainURLchecksum)
 	case "dog":
-		username = os.Getenv("DOGE_USERNAME_" + chainURL)
-		password = os.Getenv("DOGE_PASSWORD_" + chainURL)
+		username = os.Getenv("DOGE_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("DOGE_PASSWORD_" + chainURLchecksum)
 	}
 	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
 		for _, evmAddress := range strings.Split(evmAddresses, ",") {

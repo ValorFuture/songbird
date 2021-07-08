@@ -12,6 +12,9 @@
   "chains": {
     "xrp": {
       "api": "https://xrpl.flare.network:443"
+    },
+    "ltc": {
+      "api": "https://litecoin.flare.network:443"
     }
   },
   "flare": {
