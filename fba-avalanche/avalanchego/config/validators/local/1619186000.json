@@ -11,19 +11,19 @@
         {
             "nodeID": "NodeID-257bLqY4Kw6rn5kq8J5MVfcSk5F2fMENM",
             "evmAddress": "0xffF9AcF70B7aFaFAe6C495aEEDC0eD5B0EF4011e",
-            "origin": "xrp",
+            "origin": "xlm",
             "weighting": 1
         },
         {
             "nodeID": "NodeID-KVRtwzzMyWVTdmCrd8BxK79PQZt7RQVFb",
             "evmAddress": "0xffF9AcF70B7aFaFAe6C495aEEDC0eD5B0EF4011e",
-            "origin": "xrp",
+            "origin": "ltc",
             "weighting": 1
         },
         {
             "nodeID": "NodeID-Ehm2orFaPru8QwaecbzTQrrYFLfQiyztu",
             "evmAddress": "0xff57CaF5B871db64F2a7F4C5bc2d17A5E666F7E8",
-            "origin": "xrp",
+            "origin": "dog",
             "weighting": 1
         }
     ]

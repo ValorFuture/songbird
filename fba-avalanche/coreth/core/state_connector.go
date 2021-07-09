@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -529,35 +528,36 @@ func DisprovePaymentFinalityPoW(checkRet []byte, chainURL string, username strin
 }
 
 func ProvePoW(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, currencyCode string, chainURL string) (bool, bool) {
-	var username, password string
-	chainURLhash := sha256.Sum256([]byte(chainURL))
-	chainURLchecksum := hex.EncodeToString(chainURLhash[0:4])
-	switch currencyCode {
-	case "btc":
-		username = os.Getenv("BTC_USERNAME_" + chainURLchecksum)
-		password = os.Getenv("BTC_PASSWORD_" + chainURLchecksum)
-	case "ltc":
-		username = os.Getenv("LTC_USERNAME_" + chainURLchecksum)
-		password = os.Getenv("LTC_PASSWORD_" + chainURLchecksum)
-	case "dog":
-		username = os.Getenv("DOGE_USERNAME_" + chainURLchecksum)
-		password = os.Getenv("DOGE_PASSWORD_" + chainURLchecksum)
-	}
-	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
-		for _, evmAddress := range strings.Split(evmAddresses, ",") {
-			if len(evmAddress) == 45 {
-				if evmAddress[:3] == currencyCode && common.HexToAddress(evmAddress[3:]) == sender {
-					return ProveClaimPeriodFinalityPoW(checkRet, chainURL, username, password)
-				}
-			}
-		}
-		return false, false
-	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
-		return ProvePaymentFinalityPoW(checkRet, chainURL, username, password)
-	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
-		return DisprovePaymentFinalityPoW(checkRet, chainURL, username, password)
-	}
-	return false, false
+	return true, false
+	// var username, password string
+	// chainURLhash := sha256.Sum256([]byte(chainURL))
+	// chainURLchecksum := hex.EncodeToString(chainURLhash[0:4])
+	// switch currencyCode {
+	// case "btc":
+	// 	username = os.Getenv("BTC_USERNAME_" + chainURLchecksum)
+	// 	password = os.Getenv("BTC_PASSWORD_" + chainURLchecksum)
+	// case "ltc":
+	// 	username = os.Getenv("LTC_USERNAME_" + chainURLchecksum)
+	// 	password = os.Getenv("LTC_PASSWORD_" + chainURLchecksum)
+	// case "dog":
+	// 	username = os.Getenv("DOGE_USERNAME_" + chainURLchecksum)
+	// 	password = os.Getenv("DOGE_PASSWORD_" + chainURLchecksum)
+	// }
+	// if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
+	// 	for _, evmAddress := range strings.Split(evmAddresses, ",") {
+	// 		if len(evmAddress) == 45 {
+	// 			if evmAddress[:3] == currencyCode && common.HexToAddress(evmAddress[3:]) == sender {
+	// 				return ProveClaimPeriodFinalityPoW(checkRet, chainURL, username, password)
+	// 			}
+	// 		}
+	// 	}
+	// 	return false, false
+	// } else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
+	// 	return ProvePaymentFinalityPoW(checkRet, chainURL, username, password)
+	// } else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
+	// 	return DisprovePaymentFinalityPoW(checkRet, chainURL, username, password)
+	// }
+	// return false, false
 }
 
 // =======================================================
