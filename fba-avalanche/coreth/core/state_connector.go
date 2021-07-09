@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -487,7 +488,9 @@ func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL
 		if err != nil {
 			return 0, true
 		}
-		if jsonResp.Error != nil || jsonResp.Result.Confirmations < requiredConfirmations {
+		if jsonResp.Error != nil {
+			return 0, false
+		} else if jsonResp.Result.Confirmations < requiredConfirmations {
 			return 0, false
 		}
 		return jsonResp.Result.Height, false
@@ -499,17 +502,16 @@ func ProveClaimPeriodFinalityPoW(checkRet []byte, chainURL string, username stri
 	if binary.BigEndian.Uint64(checkRet[96:128]) == 0 {
 		return true, false
 	}
-	ledger := binary.BigEndian.Uint64(checkRet[56:64])
-	requiredConfirmations := binary.BigEndian.Uint64(checkRet[94:96])
-	ledgerHashString := hex.EncodeToString(checkRet[96:128])
 	blockCount, err := GetPoWBlockCount(chainURL, username, password)
 	if err {
 		return false, true
 	}
+	ledger := binary.BigEndian.Uint64(checkRet[56:64])
+	requiredConfirmations := binary.BigEndian.Uint64(checkRet[88:96])
 	if blockCount < ledger+requiredConfirmations {
 		return false, true
 	}
-	ledgerResp, err := GetPoWBlockHeader(ledgerHashString, requiredConfirmations, chainURL, username, password)
+	ledgerResp, err := GetPoWBlockHeader(hex.EncodeToString(checkRet[96:128]), requiredConfirmations, chainURL, username, password)
 	if err {
 		return false, true
 	} else if ledgerResp > 0 && ledgerResp == ledger {
@@ -528,36 +530,35 @@ func DisprovePaymentFinalityPoW(checkRet []byte, chainURL string, username strin
 }
 
 func ProvePoW(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, currencyCode string, chainURL string) (bool, bool) {
-	return true, false
-	// var username, password string
-	// chainURLhash := sha256.Sum256([]byte(chainURL))
-	// chainURLchecksum := hex.EncodeToString(chainURLhash[0:4])
-	// switch currencyCode {
-	// case "btc":
-	// 	username = os.Getenv("BTC_USERNAME_" + chainURLchecksum)
-	// 	password = os.Getenv("BTC_PASSWORD_" + chainURLchecksum)
-	// case "ltc":
-	// 	username = os.Getenv("LTC_USERNAME_" + chainURLchecksum)
-	// 	password = os.Getenv("LTC_PASSWORD_" + chainURLchecksum)
-	// case "dog":
-	// 	username = os.Getenv("DOGE_USERNAME_" + chainURLchecksum)
-	// 	password = os.Getenv("DOGE_PASSWORD_" + chainURLchecksum)
-	// }
-	// if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
-	// 	for _, evmAddress := range strings.Split(evmAddresses, ",") {
-	// 		if len(evmAddress) == 45 {
-	// 			if evmAddress[:3] == currencyCode && common.HexToAddress(evmAddress[3:]) == sender {
-	// 				return ProveClaimPeriodFinalityPoW(checkRet, chainURL, username, password)
-	// 			}
-	// 		}
-	// 	}
-	// 	return false, false
-	// } else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
-	// 	return ProvePaymentFinalityPoW(checkRet, chainURL, username, password)
-	// } else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
-	// 	return DisprovePaymentFinalityPoW(checkRet, chainURL, username, password)
-	// }
-	// return false, false
+	var username, password string
+	chainURLhash := sha256.Sum256([]byte(chainURL))
+	chainURLchecksum := hex.EncodeToString(chainURLhash[0:4])
+	switch currencyCode {
+	case "btc":
+		username = os.Getenv("BTC_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("BTC_PASSWORD_" + chainURLchecksum)
+	case "ltc":
+		username = os.Getenv("LTC_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("LTC_PASSWORD_" + chainURLchecksum)
+	case "dog":
+		username = os.Getenv("DOGE_USERNAME_" + chainURLchecksum)
+		password = os.Getenv("DOGE_PASSWORD_" + chainURLchecksum)
+	}
+	if bytes.Equal(functionSelector, GetProveClaimPeriodFinalitySelector(blockNumber)) {
+		for _, evmAddress := range strings.Split(evmAddresses, ",") {
+			if len(evmAddress) == 45 {
+				if evmAddress[:3] == currencyCode && common.HexToAddress(evmAddress[3:]) == sender {
+					return ProveClaimPeriodFinalityPoW(checkRet, chainURL, username, password)
+				}
+			}
+		}
+		return false, false
+	} else if bytes.Equal(functionSelector, GetProvePaymentFinalitySelector(blockNumber)) {
+		return ProvePaymentFinalityPoW(checkRet, chainURL, username, password)
+	} else if bytes.Equal(functionSelector, GetDisprovePaymentFinalitySelector(blockNumber)) {
+		return DisprovePaymentFinalityPoW(checkRet, chainURL, username, password)
+	}
+	return false, false
 }
 
 // =======================================================
