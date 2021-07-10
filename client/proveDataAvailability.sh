@@ -1,6 +1,16 @@
 #!/bin/bash
 
-PORT=8000
+if [ $1 == 'btc' ]; then
+  PORT=8000
+elif [ $1 == 'ltc' ]; then
+  PORT=8001
+elif [ $1 == 'doge' ]; then
+  PORT=8002
+elif [ $1 == 'xrp' ]; then
+  PORT=8003
+elif [ $1 == 'xlm' ]; then
+  PORT=8004
+fi;
 while true; do
 	nohup $(sleep 10; curl -s http://localhost:$PORT/?prove=$1) >& /dev/null &
 	if ! lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null ; then
