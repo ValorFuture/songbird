@@ -5,19 +5,19 @@ const RippleApi = new RippleAPI({
     server: 'wss://s1.ripple.com' // Public rippled server hosted by Ripple, Inc.
   });
 
-interface LineIntem {
+interface LineItem {
     XPRAddress: string,
-    FlareAdress: string,
+    FlareAddress: string,
     SparkBalanceWei: string
 }
 
-export function validateFile(parsedFile: LineIntem[]) {
+export function validateFile(parsedFile: LineItem[]) {
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         if(!RippleApi.isValidAddress(lineItem.XPRAddress)){
             console.log(`Line ${lineIndex + 2}: XPR address is invalid`)
         }
-        if(!Web3Utils.isAddress(lineItem.FlareAdress)){
+        if(!Web3Utils.isAddress(lineItem.FlareAddress)){
             console.log(`Line ${lineIndex + 2}: Flare address is invalid`)
         }
         let numberBalance = +lineItem.SparkBalanceWei;
@@ -27,3 +27,6 @@ export function validateFile(parsedFile: LineIntem[]) {
     }
 }
 
+export function validateBalance(parsedFile: LineItem[], expected_total:number) {
+
+}
