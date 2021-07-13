@@ -12,26 +12,31 @@ const chains = {
 	'btc': {
 		chainId: 0,
 		confirmations: 4,
+		claimPeriodLength: 1,
 		timeDiffExpected: 900
 	},
 	'ltc': {
 		chainId: 1,
 		confirmations: 12,
+		claimPeriodLength: 1,
 		timeDiffExpected: 150
 	},
 	'doge': {
 		chainId: 2,
 		confirmations: 40,
+		claimPeriodLength: 2,
 		timeDiffExpected: 120
 	},
 	'xrp': {
 		chainId: 3,
-		confirmations: 0,
+		confirmations: 1,
+		claimPeriodLength: 30,
 		timeDiffExpected: 120
 	},
 	'xlm': {
 		chainId: 4,
-		confirmations: 0,
+		confirmations: 1,
+		claimPeriodLength: 20,
 		timeDiffExpected: 120
 	}
 };
@@ -39,7 +44,13 @@ const chains = {
 var active,
 	config,
 	customCommon,
-	stateConnector;
+	stateConnector,
+	api,
+	username,
+	password,
+	confirmations,
+	claimPeriodLength,
+	timeDiffExpected;
 
 async function postData(url = '', username = '', password = '', data = {}) {
 	const response = await fetch(url, {
@@ -62,26 +73,18 @@ async function powProcessLedger(chainId, genesisLedger, claimPeriodIndex, claimP
 	console.log('\nRetrieving proof of work state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
 	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
 	const method = 'getblockhash';
-	const params = [currLedger];
-	var api,
-		username,
-		password;
-	if (chainId == 0) {
-		api = config.chains.btc.api;
-		username = config.chains.btc.username;
-		password = config.chains.btc.password;
-	} else if (chainId == 1) {
-		api = config.chains.ltc.api;
-		username = config.chains.ltc.username;
-		password = config.chains.ltc.password;
-	} else if (chainId == 2) {
-		api = config.chains.doge.api;
-		username = config.chains.doge.username;
-		password = config.chains.doge.password;
-	}
-	postData(api, username, password, { method: method, params: params })
+	const chainTipLedger = currLedger + confirmations*claimPeriodLength;
+	var currLedgerHash;
+	postData(api, username, password, { method: method, params: [currLedger] })
 		.then(data => {
-			return proveClaimPeriodFinality(chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, '0x' + data.result, isCommit);
+			currLedgerHash = '0x' + data.result;
+			postData(api, username, password, { method: method, params: [chainTipLedger] })
+				.then(data => {
+					return proveClaimPeriodFinality(chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, currLedgerHash, '0x' + data.result, isCommit);
+				})
+				.catch(error => {
+					processFailure(error);
+				})
 		})
 		.catch(error => {
 			processFailure(error);
@@ -95,8 +98,9 @@ async function powProcessLedger(chainId, genesisLedger, claimPeriodIndex, claimP
 async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
 	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
 	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
+	const chainTipLedger = currLedger + chains['xrp'].confirmations*chains['xrp'].claimPeriodLength;
 	const method = 'ledger';
-	const params = [{
+	var params = [{
 		'ledger_index': currLedger,
 		'binary': false,
 		'full': false,
@@ -105,9 +109,26 @@ async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLen
 		'expand': false,
 		'owner_funds': false
 	}];
-	postData(config.chains.xrp.api, config.chains.xrp.username, config.chains.xrp.password, { method: method, params: params })
+	var currLedgerHash;
+	postData(api, username, password, { method: method, params: params })
 		.then(data => {
-			return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, web3.utils.sha3(data.result.ledger_hash), isCommit);
+			currLedgerHash = web3.utils.sha3(data.result.ledger_hash);
+			params = [{
+				'ledger_index': chainTipLedger,
+				'binary': false,
+				'full': false,
+				'accounts': false,
+				'transactions': false,
+				'expand': false,
+				'owner_funds': false
+			}];
+			postData(api, username, password, { method: method, params: params })
+				.then(data => {
+					return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, currLedgerHash, web3.utils.sha3(data.result.ledger_hash), isCommit);
+				})
+				.catch(error => {
+					processFailure(error);
+				})
 		})
 		.catch(error => {
 			processFailure(error);
@@ -126,22 +147,6 @@ async function run(chainId, minLedger) {
 				if (chainId >= 0 && chainId < 3) {
 					const method = 'getblockcount',
 						params = [];
-					var api,
-						username,
-						password;
-					if (chainId == 0) {
-						api = config.chains.btc.api;
-						username = config.chains.btc.username;
-						password = config.chains.btc.password;
-					} else if (chainId == 1) {
-						api = config.chains.ltc.api;
-						username = config.chains.ltc.username;
-						password = config.chains.ltc.password;
-					} else if (chainId == 2) {
-						api = config.chains.doge.api;
-						username = config.chains.doge.username;
-						password = config.chains.doge.password;
-					}
 					postData(api, username, password, { method: method, params: params })
 						.then(data => {
 							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result);
@@ -157,7 +162,7 @@ async function run(chainId, minLedger) {
 						'expand': false,
 						'owner_funds': false
 					}];
-					postData(config.chains.xrp.api, config.chains.xrp.username, config.chains.xrp.password, { method: method, params: params })
+					postData(api, username, password, { method: method, params: params })
 						.then(data => {
 							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
 						})
@@ -183,25 +188,6 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 			"\n\x1b[0mPermitted Reveal Time:\t\x1b[33m", parseInt(getLatestIndexResult.timeDiffAvg));
 	}
 	if (parseInt(getLatestIndexResult.finalisedTimestamp) > 0) {
-		// Time to commit the proof
-		var confirmations;
-		var timeDiffExpected;
-		if (chainId == 0) {
-			confirmations = chains['btc'].confirmations;
-			timeDiffExpected = chains['btc'].timeDiffExpected;
-		} else if (chainId == 1) {
-			confirmations = chains['ltc'].confirmations;
-			timeDiffExpected = chains['ltc'].timeDiffExpected;
-		} else if (chainId == 2) {
-			confirmations = chains['doge'].confirmations;
-			timeDiffExpected = chains['doge'].timeDiffExpected;
-		} else if (chainId == 3) {
-			confirmations = chains['xrp'].confirmations;
-			timeDiffExpected = chains['xrp'].timeDiffExpected;
-		} else if (chainId == 4) {
-			confirmations = chains['xlm'].confirmations;
-			timeDiffExpected = chains['xlm'].timeDiffExpected;
-		}
 		if (parseInt(getLatestIndexResult.timeDiffAvg) < timeDiffExpected / 2) {
 			deferTime = parseInt(2 * parseInt(getLatestIndexResult.timeDiffAvg) / 3 - (currTime - parseInt(getLatestIndexResult.finalisedTimestamp)));
 		} else {
@@ -210,7 +196,7 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 		if (deferTime > 0) {
 			console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
 			return setTimeout(() => { run(chainId, minLedger) }, 1000 * (deferTime + 1));
-		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength) + confirmations) {
+		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength) + confirmations*claimPeriodLength) {
 			if (chainId >= 0 && chainId < 3) {
 				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
 			} else if (chainId == 3) {
@@ -240,7 +226,7 @@ async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexRe
 	}
 }
 
-async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, isCommit) {
+async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, chainTipHash, isCommit) {
 	stateConnector.methods.getClaimPeriodIndexFinality(
 		parseInt(chainId),
 		claimPeriodIndex).call({
@@ -249,7 +235,7 @@ async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claim
 			gasPrice: config.flare.gasPrice
 		}).catch(processFailure)
 		.then(result => {
-			console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m');
+			console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m\nchainTipHash:\t\t\x1b[33m', chainTipHash, '\x1b[0m');
 			if (result == true) {
 				console.log('This claim period already registered.');
 				setTimeout(() => { return process.exit() }, 5000);
@@ -260,14 +246,14 @@ async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claim
 							return [stateConnector.methods.proveClaimPeriodFinality(
 								chainId,
 								ledger,
-								claimPeriodIndex,
-								web3.utils.soliditySha3(config.accounts[0].address, claimPeriodHash)).encodeABI(), nonce];
+								claimPeriodHash,
+								web3.utils.soliditySha3(config.accounts[0].address, chainTipHash)).encodeABI(), nonce];
 						} else {
 							return [stateConnector.methods.proveClaimPeriodFinality(
 								chainId,
 								ledger,
-								claimPeriodIndex,
-								claimPeriodHash).encodeABI(), nonce];
+								claimPeriodHash,
+								chainTipHash).encodeABI(), nonce];
 						}
 					})
 					.then(txData => {
@@ -350,7 +336,42 @@ async function initialiseChains() {
 async function configure(chainId) {
 	let rawConfig = fs.readFileSync('config.json');
 	config = JSON.parse(rawConfig);
-	// console.log(config);
+	if (chainId == 0) {
+		api = config.chains.btc.api;
+		username = config.chains.btc.username;
+		password = config.chains.btc.password;
+		confirmations = chains['btc'].confirmations;
+		claimPeriodLength = chains['btc'].claimPeriodLength;
+		timeDiffExpected = chains['btc'].timeDiffExpected;
+	} else if (chainId == 1) {
+		api = config.chains.ltc.api;
+		username = config.chains.ltc.username;
+		password = config.chains.ltc.password;
+		confirmations = chains['ltc'].confirmations;
+		claimPeriodLength = chains['ltc'].claimPeriodLength;
+		timeDiffExpected = chains['ltc'].timeDiffExpected;
+	} else if (chainId == 2) {
+		api = config.chains.doge.api;
+		username = config.chains.doge.username;
+		password = config.chains.doge.password;
+		confirmations = chains['doge'].confirmations;
+		claimPeriodLength = chains['doge'].claimPeriodLength;
+		timeDiffExpected = chains['doge'].timeDiffExpected;
+	} else if (chainId == 3) {
+		api = config.chains.xrp.api;
+		username = config.chains.xrp.username;
+		password = config.chains.xrp.password;
+		confirmations = chains['xrp'].confirmations;
+		claimPeriodLength = chains['xrp'].claimPeriodLength;
+		timeDiffExpected = chains['xrp'].timeDiffExpected;
+	} else if (chainId == 4) {
+		api = config.chains.xlm.api;
+		username = config.chains.xlm.username;
+		password = config.chains.xlm.password;
+		confirmations = chains['xlm'].confirmations;
+		claimPeriodLength = chains['xlm'].claimPeriodLength;
+		timeDiffExpected = chains['xlm'].timeDiffExpected;
+	}
 	web3.setProvider(new web3.providers.HttpProvider(config.flare.url));
 	web3.eth.handleRevert = true;
 	customCommon = Common.forCustomChain('ropsten',

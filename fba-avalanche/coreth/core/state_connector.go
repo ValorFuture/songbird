@@ -80,7 +80,7 @@ func GetInflationContractAddr(blockNumber *big.Int) string {
 func GetProveClaimPeriodFinalitySelector(blockNumber *big.Int) []byte {
 	switch {
 	default:
-		return []byte{0xa5, 0x7d, 0x0e, 0x25}
+		return []byte{0x56, 0xec, 0x93, 0xe7}
 	}
 }
 

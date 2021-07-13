@@ -79,7 +79,7 @@ contract StateConnector {
         require(!initialised, 'initialised != false');
         governanceContract = 0xfffEc6C83c8BF5c3F4AE0cCF8c45CE20E4560BD7;
         chains[0] = Chain(true, 689300, 0, 1, 4, 0, 689300, block.timestamp, 900, 0); //BTC
-        chains[1] = Chain(true, 2083450, 0, 1, 12, 0, 2083450, block.timestamp, 150, 0); //LTC
+        chains[1] = Chain(true, 2086110, 0, 1, 12, 0, 2086110, block.timestamp, 150, 0); //LTC
         chains[2] = Chain(true, 3768500, 0, 2, 40, 0, 3768500, block.timestamp, 120, 0); //DOGE
         chains[3] = Chain(true, 62880000, 0, 30, 1, 0, 62880000, block.timestamp, 120, 0); //XRP
         chains[4] = Chain(true, 35863000, 0, 20, 1, 0, 35863000, block.timestamp, 120, 0); //XLM 
@@ -155,7 +155,7 @@ contract StateConnector {
         return (finalisedClaimPeriods[locationHash].exists);
     }
 
-    function proveClaimPeriodFinality(uint32 chainId, uint64 ledger, bytes32 claimPeriodHash, bytes32 chainTipHash) external chainExists(chainId) returns (uint32 _chainId, uint64 _ledger, uint16 _numConfirmations, bytes32 _claimPeriodHash) {
+    function proveClaimPeriodFinality(uint32 chainId, uint64 ledger, bytes32 claimPeriodHash, bytes32 chainTipHash) external chainExists(chainId) senderNotBanned returns (uint32 _chainId, uint64 _ledger, uint16 _numConfirmations, bytes32 _claimPeriodHash) {
         require(claimPeriodHash > 0x0, 'claimPeriodHash == 0x0');
         require(chainTipHash > 0x0, 'chainTipHash == 0x0');
         require(block.coinbase == msg.sender || block.coinbase == address(0x0100000000000000000000000000000000000000), 'invalid block.coinbase value');
