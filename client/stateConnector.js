@@ -50,7 +50,7 @@ async function postData(url = '', username = '', password = '', data = {}) {
 		}),
 		credentials: 'include',
 		body: JSON.stringify(data)
-	});
+	}).catch(processFailure);
 	return response.json();
 }
 
