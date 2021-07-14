@@ -4,3 +4,6 @@ This module is used to generate Airdrop genesis file and all files used within D
 
 It is also used as validator for Airdrop file from XPR snapshot on 12.12.2020
 
+## Snapshot file
+
+The file that holds snapshot data 

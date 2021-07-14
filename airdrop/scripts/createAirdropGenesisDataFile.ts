@@ -1,16 +1,18 @@
 import { BADNAME } from 'dns';
 import * as fs from 'fs';
-import {validateFile} from "./utils/processFile";
+import {calculateConversionFactor, validateFile} from "./utils/processFile";
 import { writeError } from './utils/utils';
 const Web3Utils = require('web3-utils');
 const parse = require('csv-parse/lib/sync');
-const BN = Web3Utils.toBN;
+import BigNumber from "bignumber.js";
+
+const separatorLine = "------------------------------------------------------------\n"
 
 const now = new Date()
 const logFileName = `files/logs/${now.toISOString()}_airdrop_data_gen_log.txt`;
 console.log(logFileName)
 
-fs.writeFile(logFileName, `Log file created at ${now.toISOString()} \n`, writeError);
+fs.writeFileSync(logFileName, `Log file created at ${now.toISOString()} \n`);
 
 // parse CLI parameter
 const parameters = process.argv.slice(2)
@@ -23,15 +25,18 @@ const snapshotFile = parameters[parameters.indexOf("--snapshot-file")+1]
 console.log(`Script run with: --snapshot-file : ${snapshotFile}`)
 
 // Constants
-const contingentPercentage:number = 100;    // The percentage of promised airdrop distributed
-const conversionFactor:number = 1.0073;     // The factor for converting XPR balance to Flare Wei 
+const contingentPercentage:number = 100;    // The percentage of promised airdrop distributed 
 const initialAirdropPercentage:number = 15  // 
-const expectedDistributedWei:number = BN(45)    // We want this to be 45 bil Spark token
+const expectedDistributedWei:BigNumber = new BigNumber(45*10**9*10**18);   
+// We want this to be 45 bil Spark token so 45 * 10^9 * 10^18 Wei 
 
-fs.appendFile(logFileName, `Constants: \n`, writeError);
-fs.appendFile(logFileName, `Contingent Percentages    : ${contingentPercentage} % \n`, writeError);
-fs.appendFile(logFileName, `Expected distributed Wei  : ${expectedDistributedWei} \n`, writeError);
+const constantRepString = `Constants
+Contingent Percentages      : ${contingentPercentage} %
+Expected distributed Wei    : ${expectedDistributedWei.toFixed()}
+Initial Airdrop percentage  : ${initialAirdropPercentage} %`
 
+fs.appendFileSync(logFileName, constantRepString + "\n");
+console.log(constantRepString);
 
 // Parse the CSV file
 let data = fs.readFileSync(snapshotFile, "utf8");
@@ -41,6 +46,13 @@ const parsed_file = parse(data, {
   delimiter: ','
 })
 
-validateFile(parsed_file);
+// Validate Input CSV File
+console.log(separatorLine+"Input file problems")
+fs.appendFileSync(logFileName, separatorLine+"Input file problems \n");
+validateFile(parsed_file,logFileName);
 
+// Calculating conversion factor
+let conversionFactor = calculateConversionFactor(parsed_file,expectedDistributedWei);
+console.log(separatorLine+`Conversion factor : ${conversionFactor.toString()}`)
+fs.appendFileSync(logFileName, separatorLine+`Conversion factor : ${conversionFactor.toString()} \n`);
 
