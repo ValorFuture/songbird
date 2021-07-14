@@ -113,7 +113,7 @@ async function run(chainId) {
 										leaf.source,
 										leaf.destination,
 										leaf.destinationTag,
-										leaf.amount,
+										leaf.amount.toString(),
 										leaf.currency).call({
 											from: config.accounts[1].address,
 											gas: config.flare.gas,

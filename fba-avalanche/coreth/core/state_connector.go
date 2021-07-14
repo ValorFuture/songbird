@@ -175,30 +175,30 @@ func GetXRPBlock(ledger uint64, chainURL string) (string, bool) {
 		return "", true
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return "", true
-		}
-		var checkErrorResp map[string]CheckXRPErrorResponse
-		err = json.Unmarshal(respBody, &checkErrorResp)
-		if err != nil {
-			return "", true
-		}
-		if checkErrorResp["result"].Error != "" {
-			return "", true
-		}
-		var jsonResp map[string]GetXRPBlockResponse
-		err = json.Unmarshal(respBody, &jsonResp)
-		if err != nil {
-			return "", true
-		}
-		if !jsonResp["result"].Validated {
-			return "", true
-		}
-		return jsonResp["result"].LedgerHash, false
+	if resp.StatusCode != 200 {
+		return "", true
 	}
-	return "", true
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", true
+	}
+	var checkErrorResp map[string]CheckXRPErrorResponse
+	err = json.Unmarshal(respBody, &checkErrorResp)
+	if err != nil {
+		return "", true
+	}
+	if checkErrorResp["result"].Error != "" {
+		return "", true
+	}
+	var jsonResp map[string]GetXRPBlockResponse
+	err = json.Unmarshal(respBody, &jsonResp)
+	if err != nil {
+		return "", true
+	}
+	if !jsonResp["result"].Validated {
+		return "", true
+	}
+	return jsonResp["result"].LedgerHash, false
 }
 
 func ProveClaimPeriodFinalityXRP(checkRet []byte, chainURL string) (bool, bool) {
@@ -269,78 +269,76 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 		return []byte{}, 0, true
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
+	if resp.StatusCode != 200 {
+		return []byte{}, 0, true
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, 0, true
+	}
+	var checkErrorResp map[string]CheckXRPErrorResponse
+	err = json.Unmarshal(respBody, &checkErrorResp)
+	if err != nil {
+		return []byte{}, 0, true
+	}
+	respErrString := checkErrorResp["result"].Error
+	if respErrString != "" {
+		if respErrString == "amendmentBlocked" ||
+			respErrString == "failedToForward" ||
+			respErrString == "invalid_API_version" ||
+			respErrString == "noClosed" ||
+			respErrString == "noCurrent" ||
+			respErrString == "noNetwork" ||
+			respErrString == "tooBusy" {
 			return []byte{}, 0, true
-		}
-		var checkErrorResp map[string]CheckXRPErrorResponse
-		err = json.Unmarshal(respBody, &checkErrorResp)
-		if err != nil {
-			return []byte{}, 0, true
-		}
-		respErrString := checkErrorResp["result"].Error
-		if respErrString != "" {
-			if respErrString == "amendmentBlocked" ||
-				respErrString == "failedToForward" ||
-				respErrString == "invalid_API_version" ||
-				respErrString == "noClosed" ||
-				respErrString == "noCurrent" ||
-				respErrString == "noNetwork" ||
-				respErrString == "tooBusy" {
-				return []byte{}, 0, true
-			} else {
-				return []byte{}, 0, false
-			}
-		}
-		var jsonResp map[string]GetXRPTxResponse
-		err = json.Unmarshal(respBody, &jsonResp)
-		if err != nil {
-			return []byte{}, 0, false
-		}
-		if jsonResp["result"].TransactionType == "Payment" && jsonResp["result"].Validated && jsonResp["result"].Meta.TransactionResult == "tesSUCCESS" {
-			inLedger := uint64(jsonResp["result"].InLedger)
-			if inLedger > 0 && inLedger < latestAvailableLedger && jsonResp["result"].Validated {
-				var currency string
-				var amount uint64
-				if stringAmount, ok := jsonResp["result"].Meta.Amount.(string); ok {
-					amount, err = strconv.ParseUint(stringAmount, 10, 64)
-					if err != nil {
-						return []byte{}, 0, false
-					}
-					currency = "XRP"
-				} else {
-					amountStruct, err := json.Marshal(jsonResp["result"].Meta.Amount)
-					if err != nil {
-						return []byte{}, 0, false
-					}
-					var issuedCurrencyResp GetXRPTxIssuedCurrency
-					err = json.Unmarshal(amountStruct, &issuedCurrencyResp)
-					if err != nil {
-						return []byte{}, 0, false
-					}
-					floatAmount, err := strconv.ParseFloat(issuedCurrencyResp.Value, 64)
-					if err != nil {
-						return []byte{}, 0, false
-					}
-					amount = uint64(floatAmount * math.Pow(10, 15))
-					currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
-				}
-				txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))
-				sourceHash := crypto.Keccak256([]byte(jsonResp["result"].Account))
-				destinationHash := crypto.Keccak256([]byte(jsonResp["result"].Destination))
-				destinationTagHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp["result"].DestinationTag))), 32))
-				amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(amount))), 32))
-				currencyHash := crypto.Keccak256([]byte(currency))
-				return crypto.Keccak256(txIdHash, sourceHash, destinationHash, destinationTagHash, amountHash, currencyHash), inLedger, false
-			} else {
-				return []byte{}, 0, false
-			}
 		} else {
 			return []byte{}, 0, false
 		}
 	}
-	return []byte{}, 0, true
+	var jsonResp map[string]GetXRPTxResponse
+	err = json.Unmarshal(respBody, &jsonResp)
+	if err != nil {
+		return []byte{}, 0, false
+	}
+	if jsonResp["result"].TransactionType != "Payment" || !jsonResp["result"].Validated || jsonResp["result"].Meta.TransactionResult != "tesSUCCESS" {
+		return []byte{}, 0, false
+	}
+	inLedger := uint64(jsonResp["result"].InLedger)
+	if inLedger == 0 || inLedger >= latestAvailableLedger || !jsonResp["result"].Validated {
+		return []byte{}, 0, false
+	}
+	var currency string
+	var amount uint64
+	if stringAmount, ok := jsonResp["result"].Meta.Amount.(string); ok {
+		amount, err = strconv.ParseUint(stringAmount, 10, 64)
+		if err != nil {
+			return []byte{}, 0, false
+		}
+		currency = "XRP"
+	} else {
+		amountStruct, err := json.Marshal(jsonResp["result"].Meta.Amount)
+		if err != nil {
+			return []byte{}, 0, false
+		}
+		var issuedCurrencyResp GetXRPTxIssuedCurrency
+		err = json.Unmarshal(amountStruct, &issuedCurrencyResp)
+		if err != nil {
+			return []byte{}, 0, false
+		}
+		floatAmount, err := strconv.ParseFloat(issuedCurrencyResp.Value, 64)
+		if err != nil {
+			return []byte{}, 0, false
+		}
+		amount = uint64(floatAmount * math.Pow(10, 15))
+		currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
+	}
+	txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))
+	sourceHash := crypto.Keccak256([]byte(jsonResp["result"].Account))
+	destinationHash := crypto.Keccak256([]byte(jsonResp["result"].Destination))
+	destinationTagHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp["result"].DestinationTag))), 32))
+	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(amount))), 32))
+	currencyHash := crypto.Keccak256([]byte(currency))
+	return crypto.Keccak256(txIdHash, sourceHash, destinationHash, destinationTagHash, amountHash, currencyHash), inLedger, false
 }
 
 func ProvePaymentFinalityXRP(checkRet []byte, chainURL string) (bool, bool) {
@@ -421,22 +419,22 @@ func GetPoWBlockCount(chainURL string, username string, password string) (uint64
 		return 0, true
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return 0, true
-		}
-		var jsonResp GetPoWBlockCountResp
-		err = json.Unmarshal(respBody, &jsonResp)
-		if err != nil {
-			return 0, true
-		}
-		if jsonResp.Error != nil {
-			return 0, true
-		}
-		return jsonResp.Result, false
+	if resp.StatusCode != 200 {
+		return 0, true
 	}
-	return 0, true
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, true
+	}
+	var jsonResp GetPoWBlockCountResp
+	err = json.Unmarshal(respBody, &jsonResp)
+	if err != nil {
+		return 0, true
+	}
+	if jsonResp.Error != nil {
+		return 0, true
+	}
+	return jsonResp.Result, false
 }
 
 type GetPoWBlockHeaderResult struct {
@@ -478,24 +476,24 @@ func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL
 		return 0, true
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return 0, true
-		}
-		var jsonResp GetPoWBlockHeaderResp
-		err = json.Unmarshal(respBody, &jsonResp)
-		if err != nil {
-			return 0, true
-		}
-		if jsonResp.Error != nil {
-			return 0, false
-		} else if jsonResp.Result.Confirmations < requiredConfirmations {
-			return 0, false
-		}
-		return jsonResp.Result.Height, false
+	if resp.StatusCode != 200 {
+		return 0, true
 	}
-	return 0, true
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, true
+	}
+	var jsonResp GetPoWBlockHeaderResp
+	err = json.Unmarshal(respBody, &jsonResp)
+	if err != nil {
+		return 0, true
+	}
+	if jsonResp.Error != nil {
+		return 0, false
+	} else if jsonResp.Result.Confirmations < requiredConfirmations {
+		return 0, false
+	}
+	return jsonResp.Result.Height, false
 }
 
 func ProveClaimPeriodFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
@@ -566,15 +564,15 @@ func ProvePoW(sender common.Address, blockNumber *big.Int, functionSelector []by
 // =======================================================
 
 func ProveClaimPeriodFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
+	return false, false
 }
 
 func ProvePaymentFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
+	return false, false
 }
 
 func DisprovePaymentFinalityXLM(checkRet []byte, chainURL string) (bool, bool) {
-	return true, false
+	return false, false
 }
 
 func ProveXLM(sender common.Address, blockNumber *big.Int, functionSelector []byte, checkRet []byte, evmAddresses string, chainURL string) (bool, bool) {
