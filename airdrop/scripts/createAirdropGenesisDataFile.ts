@@ -5,6 +5,7 @@ import { writeError } from './utils/utils';
 const Web3Utils = require('web3-utils');
 const parse = require('csv-parse/lib/sync');
 import BigNumber from "bignumber.js";
+import { createGenesisFileData } from './utils/genesisFile';
 
 const separatorLine = "------------------------------------------------------------\n"
 
@@ -105,3 +106,8 @@ fs.appendFileSync(logFileName, `Number of processed accounts : ${convertedAirdro
 console.log(`Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}`)
 fs.appendFileSync(logFileName, `Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}\n`);
 console.log(convertedAirdropData);
+
+
+// Create go genesis file
+const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
+fs.appendFileSync(goGenesisFile, fileData);
