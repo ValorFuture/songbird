@@ -22,8 +22,40 @@ if(!parameters.includes("--snapshot-file")){
     process.exit(0);
 }
 const snapshotFile = parameters[parameters.indexOf("--snapshot-file")+1]
+// go Genesis output file 
+if(!parameters.includes("--genesis-file")){
+    console.log("You must provide go output file for genesis with --genesis-file flag");
+    process.exit(0);
+}
+const goGenesisFile = parameters[parameters.indexOf("--genesis-file")+1]
+// go genesis override flag
+const canOverwriteGenesis = parameters.includes("--override")
+if (fs.existsSync(goGenesisFile)) {
+    if(!canOverwriteGenesis){
+        console.log("go Genesis file already exist, if you want to overwrite it provide --override");
+        process.exit(0);
+    }
+    else {
+        fs.writeFile(goGenesisFile, '', function (err) {
+            if (err) {
+                console.log("Can't create file at provided destination")
+                throw err
+            };
+          });
+    }
+    // File exists in path
+  } else {
+    fs.writeFile(goGenesisFile, '', function (err) {
+        if (err) {
+            console.log("Can't create file at provided destination")
+            throw err
+        };
+      });
+  }
+
 const inputRepString = `Script run with 
---snapshot-file              : ${snapshotFile}`
+--snapshot-file              : ${snapshotFile}
+--genesis-file               : ${goGenesisFile}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
