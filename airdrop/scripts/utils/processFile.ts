@@ -19,6 +19,11 @@ interface validateRes {
     validAccountsLen: number
 }
 
+interface conversionFactorRes {
+    conversionFactor: BigNumber,
+    totalXPRBalance: BigNumber
+}
+
 interface airdropGenesisRes {
     processedAccounts: string[],
     processedAccountsLen: number,
@@ -55,16 +60,21 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
     return {validAccounts, validAccountsLen};
 }
 
-export function calculateConversionFactor(parsedFile: LineItem[], validAccounts: validateRes, expected_total:any): any{
-    let total = new BigNumber(0);
+export function calculateConversionFactor
+(parsedFile: LineItem[], validAccounts: validateRes, expected_total:BigNumber): conversionFactorRes{
+    let totalXPRBalance = new BigNumber(0);
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
-            total = total.plus(lineItem.XPRBalance);
+            totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
         }
     }
     let expectedTot = new BigNumber(expected_total);
-    return expectedTot.div(total);
+    const conversionFactor = expectedTot.div(totalXPRBalance);
+    return {
+        conversionFactor,
+        totalXPRBalance
+    };
 }
 
 export function createFlareAirdropGenesisData
@@ -82,7 +92,7 @@ conversionFactor: BigNumber, initialAirdropPercentage: number ):airdropGenesisRe
             accBalance = accBalance.multipliedBy(conversionFactor)
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);
             // rounding down to 0 decimal places
-            accBalance = accBalance.dp(0, BigNumber.ROUND_DOWN);
+            accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);
             processedWei = processedWei.plus(accBalance);
             processedAccounts[lineIndex] = `"${lineItem.FlareAddress}": {"balance": "0x${accBalance.toString(16)}" },`;
         }

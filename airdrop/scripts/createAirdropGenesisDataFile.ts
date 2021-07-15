@@ -61,12 +61,12 @@ fs.appendFileSync(logFileName, `Number of valid accounts     : ${validatedData.v
 // Calculating conversion factor
 let conversionFactor = calculateConversionFactor(parsed_file, validatedData, expectedDistributedWei);
 // Log conversion factor results
-console.log(separatorLine+`Conversion factor            : ${conversionFactor.toString()}`)
-fs.appendFileSync(logFileName, separatorLine+`Conversion factor            : ${conversionFactor.toString()} \n`);
+console.log(separatorLine+`Conversion factor            : ${conversionFactor.conversionFactor.toString()}`)
+fs.appendFileSync(logFileName, separatorLine+`Conversion factor            : ${conversionFactor.conversionFactor.toString()} \n`);
 
 // Create Flare balance json
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
-     contingentPercentage, conversionFactor, initialAirdropPercentage);
+     contingentPercentage, conversionFactor.conversionFactor, initialAirdropPercentage);
 // Log balance created
 console.log(`Number of processed accounts : ${convertedAirdropData.processedAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of processed accounts : ${convertedAirdropData.processedAccountsLen}\n`);
