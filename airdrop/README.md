@@ -4,6 +4,33 @@ This module is used to generate Airdrop genesis file and all files used within D
 
 It is also used as validator for Airdrop file from XPR snapshot on 12.12.2020
 
+## Running the script
+
+In order to run the script one must navigate into `/airdrop` folder.
+From there one must initially install all dependencies:
+```
+yarn
+``` 
+
+One can then run the script 
+```
+yarn ts-node scripts/createAirdropGenesisDataFile.ts
+``` 
+Note that one needs to provide additional parameters that are described 
+more thoroughly in input parameters section.
+
+Required parameters:
+```
+--snapshot-file 
+--genesis-file 
+``` 
+
+Optional parameters:
+```
+--override
+``` 
+
+
 ## Input parameters
 ### Snapshot file
 
