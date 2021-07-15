@@ -56,7 +56,8 @@ if (fs.existsSync(goGenesisFile)) {
 
 const inputRepString = `Script run with 
 --snapshot-file              : ${snapshotFile}
---genesis-file               : ${goGenesisFile}`
+--genesis-file               : ${goGenesisFile}
+--override                   : ${canOverwriteGenesis}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
@@ -105,8 +106,6 @@ console.log(`Number of processed accounts : ${convertedAirdropData.processedAcco
 fs.appendFileSync(logFileName, `Number of processed accounts : ${convertedAirdropData.processedAccountsLen}\n`);
 console.log(`Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}`)
 fs.appendFileSync(logFileName, `Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}\n`);
-console.log(convertedAirdropData);
-
 
 // Create go genesis file
 const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
