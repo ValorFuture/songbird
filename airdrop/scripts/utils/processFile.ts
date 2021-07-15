@@ -12,11 +12,16 @@ const RippleApi = new RippleAPI({
 interface LineItem {
     XPRAddress: string,
     FlareAddress: string,
-    SparkBalanceWei: string
+    XPRBalance: string
+}
+interface validateRes {
+    validAccounts: boolean[],
+    validAccountsLen: number
 }
 
-export function validateFile(parsedFile: LineItem[], logFile: string):number {
-    let validAccounts = 0;
+export function validateFile(parsedFile: LineItem[], logFile: string):validateRes {
+    let validAccountsLen:number = 0;
+    let validAccounts:boolean[] = []
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
@@ -30,25 +35,26 @@ export function validateFile(parsedFile: LineItem[], logFile: string):number {
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Flare address is invalid \n`);
             isValid = false;
         }
-        let numberBalance = +lineItem.SparkBalanceWei;
+        let numberBalance = +lineItem.XPRBalance;
         if(isNaN(numberBalance)){
             console.log(`Line ${lineIndex + 2}: Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Balance is not a valid number \n`);
             isValid = false;
         }
+        validAccounts[lineIndex] = isValid
         if(isValid){
-            validAccounts += 1;
+            validAccountsLen += 1;
         }
-    }
-    return validAccounts;
+    } 
+    return {validAccounts, validAccountsLen};
 }
 
 export function calculateConversionFactor(parsedFile: LineItem[], expected_total:any): any{
     let total = new BigNumber(0);
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
-        if(!isNaN(+lineItem.SparkBalanceWei)){
-            total = total.plus(lineItem.SparkBalanceWei);
+        if(!isNaN(+lineItem.XPRBalance)){
+            total = total.plus(lineItem.XPRBalance);
         }
     }
     let expectedTot = new BigNumber(expected_total);
@@ -56,6 +62,19 @@ export function calculateConversionFactor(parsedFile: LineItem[], expected_total
 }
 
 export function createFlareAirdropGenesisData
-(parsedFile: LineItem[], contingentPercentage: number, conversionFactor: BigNumber ){
-    let read_accounts = 0
+(parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: number,
+conversionFactor: BigNumber, initialAirdropPercentage: number ){
+    let read_accounts = 0;
+    let processedAccounts = []
+    for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
+        if(validAccounts.validAccounts[lineIndex]){
+            let lineItem = parsedFile[lineIndex];
+            read_accounts += 1
+            let accBalance = new BigNumber(lineItem.XPRBalance);
+            accBalance = accBalance.multipliedBy(contingentPercentage).multipliedBy(conversionFactor).multipliedBy(initialAirdropPercentage)
+            // rounding down to 0 decimal places
+            accBalance = accBalance.dp(0, 1)
+            processedAccounts[lineIndex] = `"${lineItem.FlareAddress}": { \n    "balance": "0x${accBalance.toString(16)}" },`;
+        }
+    }
 }

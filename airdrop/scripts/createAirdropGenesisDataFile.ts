@@ -1,6 +1,6 @@
 import { BADNAME } from 'dns';
 import * as fs from 'fs';
-import {calculateConversionFactor, validateFile} from "./utils/processFile";
+import {calculateConversionFactor, createFlareAirdropGenesisData, validateFile} from "./utils/processFile";
 import { writeError } from './utils/utils';
 const Web3Utils = require('web3-utils');
 const parse = require('csv-parse/lib/sync');
@@ -26,7 +26,7 @@ console.log(`Script run with: --snapshot-file : ${snapshotFile}`)
 
 // Constants
 const contingentPercentage:number = 100;    // The percentage of promised airdrop distributed 
-const initialAirdropPercentage:number = 15  // 
+const initialAirdropPercentage:number = 0.15  // 
 const expectedDistributedWei:BigNumber = new BigNumber(45*10**9*10**18);   
 // We want this to be 45 bil Spark token so 45 * 10^9 * 10^18 Wei 
 
@@ -47,14 +47,17 @@ const parsed_file = parse(data, {
 })
 
 // Validate Input CSV File
+let {validAccounts, validAccountsLen} = validateFile(parsed_file,logFileName);
 console.log(separatorLine+"Input file problems")
 fs.appendFileSync(logFileName, separatorLine+"Input file problems \n");
-let validAccounts = validateFile(parsed_file,logFileName);
-console.log(`Number of valid accounts    : ${validAccounts}`)
-fs.appendFileSync(logFileName, `Number of valid accounts    : ${validAccounts}\n`);
+console.log(`Number of valid accounts    : ${validAccountsLen}`)
+fs.appendFileSync(logFileName, `Number of valid accounts    : ${validAccountsLen}\n`);
 
 // Calculating conversion factor
 let conversionFactor = calculateConversionFactor(parsed_file,expectedDistributedWei);
-console.log(separatorLine+`Conversion factor : ${conversionFactor.toString()}`)
-fs.appendFileSync(logFileName, separatorLine+`Conversion factor : ${conversionFactor.toString()} \n`);
+console.log(separatorLine+`Conversion factor           : ${conversionFactor.toString()}`)
+fs.appendFileSync(logFileName, separatorLine+`Conversion factor           : ${conversionFactor.toString()} \n`);
 
+// Create Flare balance json
+createFlareAirdropGenesisData(parsed_file, {validAccounts, validAccountsLen},
+     contingentPercentage, conversionFactor, initialAirdropPercentage);
