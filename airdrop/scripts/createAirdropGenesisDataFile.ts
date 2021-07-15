@@ -49,7 +49,9 @@ const parsed_file = parse(data, {
 // Validate Input CSV File
 console.log(separatorLine+"Input file problems")
 fs.appendFileSync(logFileName, separatorLine+"Input file problems \n");
-validateFile(parsed_file,logFileName);
+let validAccounts = validateFile(parsed_file,logFileName);
+console.log(`Number of valid accounts    : ${validAccounts}`)
+fs.appendFileSync(logFileName, `Number of valid accounts    : ${validAccounts}\n`);
 
 // Calculating conversion factor
 let conversionFactor = calculateConversionFactor(parsed_file,expectedDistributedWei);
