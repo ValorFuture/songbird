@@ -19,6 +19,12 @@ interface validateRes {
     validAccountsLen: number
 }
 
+interface airdropGenesisRes {
+    processedAccounts: string[],
+    processedAccountsLen: number,
+    processedWei: BigNumber
+}
+
 export function validateFile(parsedFile: LineItem[], logFile: string):validateRes {
     let validAccountsLen:number = 0;
     let validAccounts:boolean[] = []
@@ -49,11 +55,11 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
     return {validAccounts, validAccountsLen};
 }
 
-export function calculateConversionFactor(parsedFile: LineItem[], expected_total:any): any{
+export function calculateConversionFactor(parsedFile: LineItem[], validAccounts: validateRes, expected_total:any): any{
     let total = new BigNumber(0);
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
-        let lineItem = parsedFile[lineIndex];
-        if(!isNaN(+lineItem.XPRBalance)){
+        if(validAccounts.validAccounts[lineIndex]){
+            let lineItem = parsedFile[lineIndex];
             total = total.plus(lineItem.XPRBalance);
         }
     }
@@ -63,18 +69,30 @@ export function calculateConversionFactor(parsedFile: LineItem[], expected_total
 
 export function createFlareAirdropGenesisData
 (parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: number,
-conversionFactor: BigNumber, initialAirdropPercentage: number ){
-    let read_accounts = 0;
-    let processedAccounts = []
+conversionFactor: BigNumber, initialAirdropPercentage: number ):airdropGenesisRes{
+    let processedAccountsLen:number = 0;
+    let processedAccounts:string[] = [];
+    let processedWei = new BigNumber(0)
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
-            read_accounts += 1
+            processedAccountsLen += 1
             let accBalance = new BigNumber(lineItem.XPRBalance);
-            accBalance = accBalance.multipliedBy(contingentPercentage).multipliedBy(conversionFactor).multipliedBy(initialAirdropPercentage)
+            accBalance = accBalance.multipliedBy(contingentPercentage)
+            accBalance = accBalance.multipliedBy(conversionFactor)
+            accBalance = accBalance.multipliedBy(initialAirdropPercentage);
             // rounding down to 0 decimal places
-            accBalance = accBalance.dp(0, 1)
-            processedAccounts[lineIndex] = `"${lineItem.FlareAddress}": { \n    "balance": "0x${accBalance.toString(16)}" },`;
+            accBalance = accBalance.dp(0, BigNumber.ROUND_DOWN);
+            processedWei = processedWei.plus(accBalance);
+            processedAccounts[lineIndex] = `"${lineItem.FlareAddress}": {"balance": "0x${accBalance.toString(16)}" },`;
         }
+        else{
+            processedAccounts[lineIndex] = ``;
+        }
+    }
+    return {
+        processedAccounts,
+        processedAccountsLen,
+        processedWei
     }
 }
