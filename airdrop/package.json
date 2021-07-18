@@ -8,7 +8,8 @@
   "private": true,
   "scripts": {
     "----------AIRDROP-SCRIPTS----------": "",
-    "testa": "yarn ts-node scripts/createAirdropGenesisDataFile.ts --snapshot-file files/example.csv --genesis-file files/go/genesis_scdev.go --override"
+    "airdrop_default": "yarn ts-node scripts/createAirdropGenesisDataFile.ts --snapshot-file files/example.csv --genesis-file files/go/genesis_scdev.go --override",
+    "airdrop": "yarn ts-node scripts/createAirdropGenesisDataFile.ts"
   },
   "dependencies": {
     "@types/node": "^16.3.0",
