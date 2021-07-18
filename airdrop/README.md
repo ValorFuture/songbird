@@ -53,7 +53,7 @@ Fields are defined as:
 Script does multiple things 
 
 1. it generates genesis_scdev file 
-
+2. Does a bunch of health-checks
 
 In order to do that we do the following computations and checkups:
 
