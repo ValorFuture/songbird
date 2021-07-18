@@ -94,7 +94,7 @@ conversionFactor: BigNumber, initialAirdropPercentage: number ):airdropGenesisRe
             // rounding down to 0 decimal places
             accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);
             processedWei = processedWei.plus(accBalance);
-            processedAccounts[lineIndex] = `"${lineItem.FlareAddress}": {"balance": "0x${accBalance.toString(16)}" },`;
+            processedAccounts[lineIndex] = `"${lineItem.FlareAddress.substring(2)}": {"balance": "0x${accBalance.toString(16)}" },`;
         }
         else{
             processedAccounts[lineIndex] = ``;

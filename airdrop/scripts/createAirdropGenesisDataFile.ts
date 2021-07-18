@@ -107,6 +107,9 @@ fs.appendFileSync(logFileName, `Number of processed accounts : ${convertedAirdro
 console.log(`Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}`)
 fs.appendFileSync(logFileName, `Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}\n`);
 
+// Do final health checks
+
+
 // Create go genesis file
 const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
 fs.appendFileSync(goGenesisFile, fileData);
