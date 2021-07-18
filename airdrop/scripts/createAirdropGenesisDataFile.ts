@@ -7,7 +7,7 @@ const parse = require('csv-parse/lib/sync');
 import BigNumber from "bignumber.js";
 import { createGenesisFileData } from './utils/genesisFile';
 
-const separatorLine = "------------------------------------------------------------\n"
+const separatorLine = "--------------------------------------------------------------------------------\n"
 
 const now = new Date()
 const logFileName = `files/logs/${now.toISOString()}_airdrop_data_gen_log.txt`;
@@ -55,9 +55,9 @@ if (fs.existsSync(goGenesisFile)) {
   }
 
 const inputRepString = `Script run with 
---snapshot-file              : ${snapshotFile}
---genesis-file               : ${goGenesisFile}
---override                   : ${canOverwriteGenesis}`
+--snapshot-file                             : ${snapshotFile}
+--genesis-file                              : ${goGenesisFile}
+--override                                  : ${canOverwriteGenesis}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
@@ -68,10 +68,10 @@ const expectedDistributedWei:BigNumber = new BigNumber(45*10**9*10**18);
 // We want this to be 45 bil Spark token so 45 * 10^9 * 10^18 Wei 
 
 const constantRepString = separatorLine + `Constants
-Contingent Percentages       : ${contingentPercentage * 100} %
-Initial Airdrop percentage   : ${initialAirdropPercentage * 100} %
-Total distributed Wei        : ${expectedDistributedWei.toFixed()}
-Wei distributed at Airdrop   : ${expectedDistributedWei.multipliedBy(initialAirdropPercentage).toFixed()}`
+Contingent Percentages                      : ${contingentPercentage * 100} %
+Initial Airdrop percentage                  : ${initialAirdropPercentage * 100} %
+Total distributed Wei                       : ${expectedDistributedWei.toFixed()}
+Wei distributed at Airdrop                  : ${expectedDistributedWei.multipliedBy(initialAirdropPercentage).toFixed()}`
 
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
@@ -89,23 +89,27 @@ fs.appendFileSync(logFileName, separatorLine+"Input file problems \n");
 // Validate Input CSV File
 let validatedData = validateFile(parsed_file,logFileName);
 // Log Validation results
-console.log(`Number of valid accounts     : ${validatedData.validAccountsLen}`)
-fs.appendFileSync(logFileName, `Number of valid accounts     : ${validatedData.validAccountsLen}\n`);
+console.log(`Number of valid accounts                    : ${validatedData.validAccountsLen}`)
+fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 
 // Calculating conversion factor
 let conversionFactor = calculateConversionFactor(parsed_file, validatedData, expectedDistributedWei);
 // Log conversion factor results
-console.log(separatorLine+`Conversion factor            : ${conversionFactor.conversionFactor.toString()}`)
-fs.appendFileSync(logFileName, separatorLine+`Conversion factor            : ${conversionFactor.conversionFactor.toString()} \n`);
+console.log(separatorLine+`Conversion factor                           : ${conversionFactor.conversionFactor.toString()}`)
+fs.appendFileSync(logFileName, separatorLine+`Conversion factor                           : ${conversionFactor.conversionFactor.toString()} \n`);
+console.log(separatorLine+`Total XPR balance read                      : ${conversionFactor.totalXPRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, separatorLine+`Total XPR balance read                      : ${conversionFactor.totalXPRBalance.toFixed()} \n`);
+
+
 
 // Create Flare balance json
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
      contingentPercentage, conversionFactor.conversionFactor, initialAirdropPercentage);
 // Log balance created
-console.log(`Number of processed accounts : ${convertedAirdropData.processedAccountsLen}`)
-fs.appendFileSync(logFileName, `Number of processed accounts : ${convertedAirdropData.processedAccountsLen}\n`);
-console.log(`Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}`)
-fs.appendFileSync(logFileName, `Total FLR added to accounts  : ${convertedAirdropData.processedWei.toFixed()}\n`);
+console.log(`Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}`)
+fs.appendFileSync(logFileName, `Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}\n`);
+console.log(`Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}`)
+fs.appendFileSync(logFileName, `Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}\n`);
 
 // Do final health checks
 
