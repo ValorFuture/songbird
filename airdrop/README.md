@@ -47,3 +47,41 @@ Fields are defined as:
 2. FLR address
 3. XRP balance at time of snapshot, to six decimals, base 10.
 
+
+## What does script do
+
+Script does multiple things 
+
+1. it generates genesis_scdev file 
+
+
+In order to do that we do the following computations and checkups:
+
+For each line of airdrop file we do the following computation:
+```
+FLR to distribute = XRP balance * conversion factor * initial airdrop percentage * contingent percentage
+
+```
+In order to generate a line for each account as such:
+```
+	      "ff50eF6F4b0568493175defa3655b10d68Bf41FB": {
+	        "balance": "0x314dc6448d9338c15B0a00000000"
+	      },
+```
+
+Doing so we:
+1. Check validity of each XPR address
+2. Check validity of each Flare address
+3. Check that each balance is of an expected format
+4. Maintain the amount of lines read (valid and invalid lines)
+5. Check that there are no duplicate XPR addresses in input file
+6. Join the duplicate Flare addresses ant their balances into one balance (assuming they came from two separate XPR addresses)
+7. Maintain the total XPR read from input file 
+8. Maintain the total airdropped wei, and check that it is close enough to expected airdrop wei number
+
+## Future TODO's
+
+We want to expand the script (or add new one) that generates either data file used in smart-contract repo
+ to add accounts to Distribution contract, or create a transaction list with in order nonce logic, that can be 
+ imported to some script run shortly after genesis that will fill the Distribution contract with necessary 
+ data
