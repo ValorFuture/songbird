@@ -35,6 +35,8 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
     let validAccountsLen:number = 0;
     let validAccounts:boolean[] = []
     let invalidAccountsLen:number = 0
+    let seenXPRAddresses = new Set();
+    let seenXPRAddressesDetail: {[name: string]: number } = {};;
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
@@ -43,6 +45,16 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: XPR address is invalid \n`);
             isValid = false;
         }
+        if(seenXPRAddresses.has(lineItem.XPRAddress)){
+            // We have already seen this XPR address
+            console.log(`Line ${lineIndex + 2}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}`);
+            fs.appendFileSync(logFile, `Line ${lineIndex + 2}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}\n`);
+            isValid = false;
+        }
+        if(!seenXPRAddresses.has(lineItem.XPRAddress)){
+            seenXPRAddresses.add(lineItem.XPRAddress);
+            seenXPRAddressesDetail[lineItem.XPRAddress] = lineIndex;
+        } 
         if(!Web3Utils.isAddress(lineItem.FlareAddress)){
             console.log(`Line ${lineIndex + 2}: Flare address is invalid`);
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Flare address is invalid \n`);
