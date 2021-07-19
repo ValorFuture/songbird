@@ -131,13 +131,18 @@ fs.appendFileSync(logFileName, `Total FLR added to accounts                 : ${
 
 // **********************
 // Do final health checks
+let healthy = true;
 let accounts_match = convertedAirdropData.processedAccountsLen == validatedData.validAccountsLen;
+healthy = healthy && accounts_match;
 console.log(separatorLine+"Health checks")
 fs.appendFileSync(logFileName, separatorLine+"Health checks\n");
 console.log(`Read and processed account number match     : ${accounts_match}`)
 fs.appendFileSync(logFileName, `Read and processed account number match     : ${accounts_match} \n`);
 
+if(healthy){
+    const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
+    fs.appendFileSync(goGenesisFile, fileData);
+    console.log(`Created output genesis file at              : ${goGenesisFile}`)
+    fs.appendFileSync(logFileName, `Created output genesis file at              : ${goGenesisFile} \n`);
+}
 
-// Create go genesis file
-const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
-fs.appendFileSync(goGenesisFile, fileData);

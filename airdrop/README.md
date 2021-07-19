@@ -27,7 +27,8 @@ Required parameters:
 
 Optional parameters:
 ```
---log-path (default to: files/logs/)
+--log-path  (default to: files/logs/)
+--contingent-percentage  (default to: 100)
 ``` 
 
 Optional flags:
