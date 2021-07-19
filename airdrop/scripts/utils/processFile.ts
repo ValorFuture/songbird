@@ -5,6 +5,8 @@ import { writeError } from './utils';
 import BigNumber from "bignumber.js";
 import { removeUndefined } from 'ripple-lib/dist/npm/common';
 
+BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
+
 const RippleApi = new RippleAPI({
     server: 'wss://s1.ripple.com' // Public rippled server hosted by Ripple, Inc.
   });
@@ -94,8 +96,8 @@ export function calculateConversionFactor
 }
 
 export function createFlareAirdropGenesisData
-(parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: number,
-conversionFactor: BigNumber, initialAirdropPercentage: number ):airdropGenesisRes{
+(parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: BigNumber,
+conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesisRes{
     let processedAccountsLen:number = 0;
     let processedAccounts:string[] = [];
     let processedWei = new BigNumber(0)
@@ -103,7 +105,7 @@ conversionFactor: BigNumber, initialAirdropPercentage: number ):airdropGenesisRe
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
             processedAccountsLen += 1
-            let accBalance = new BigNumber(lineItem.XPRBalance);
+            let accBalance = new BigNumber(lineItem.XPRBalance);     
             accBalance = accBalance.multipliedBy(contingentPercentage)
             accBalance = accBalance.multipliedBy(conversionFactor)
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);

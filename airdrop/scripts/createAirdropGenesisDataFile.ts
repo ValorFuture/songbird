@@ -7,6 +7,8 @@ const parse = require('csv-parse/lib/sync');
 import BigNumber from "bignumber.js";
 import { createGenesisFileData } from './utils/genesisFile';
 
+BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
+
 const separatorLine = "--------------------------------------------------------------------------------\n"
 
 // parse CLI parameter
@@ -65,19 +67,23 @@ fs.writeFileSync(logFileName, `Log file created at ${now.toISOString()} GMT(+0)\
 const inputRepString = `Script run with 
 --snapshot-file                             : ${snapshotFile}
 --genesis-file                              : ${goGenesisFile}
---override                                  : ${canOverwriteGenesis}`
+--override                                  : ${canOverwriteGenesis}
+--log-path                                  : ${logPath}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
 // Constants
-const contingentPercentage:number = 1;    // The percentage of promised airdrop distributed 
-const initialAirdropPercentage:number = 0.15  // 
-const expectedDistributedWei:BigNumber = new BigNumber(45*10**9*10**18);   
+const contingentPercentage:BigNumber = new BigNumber(1);    // The percentage of promised airdrop distributed 
+const initialAirdropPercentage:BigNumber = new BigNumber(0.15)  // 
+const ten = new BigNumber(10);
+let expectedDistributedWei:BigNumber = new BigNumber(45)
+expectedDistributedWei = expectedDistributedWei.multipliedBy(ten.pow(9));
+expectedDistributedWei = expectedDistributedWei.multipliedBy(ten.pow(18));
 // We want this to be 45 bil Spark token so 45 * 10^9 * 10^18 Wei 
 
 const constantRepString = separatorLine + `Constants
-Contingent Percentages                      : ${contingentPercentage * 100} %
-Initial Airdrop percentage                  : ${initialAirdropPercentage * 100} %
+Contingent Percentages                      : ${contingentPercentage.multipliedBy(100).toFixed()} %
+Initial Airdrop percentage                  : ${initialAirdropPercentage.multipliedBy(100).toFixed()} %
 Total distributed Wei                       : ${expectedDistributedWei.toFixed()}
 Wei distributed at Airdrop                  : ${expectedDistributedWei.multipliedBy(initialAirdropPercentage).toFixed()}`
 
