@@ -50,18 +50,20 @@ if (fs.existsSync(goGenesisFile)) {
       });
   }
 // log path (--log-path)
-let logPath = ""
+let logPath = "files/logs/";
 if(parameters.includes("--log-path")){
     logPath = parameters[parameters.indexOf("--log-path")+1];
 } 
-if(!parameters.includes("--log-path")) {
-    logPath = "files/logs/";
-}
 const now = new Date()
 const logFileName = logPath+`${now.toISOString()}_airdrop_data_gen_log.txt`;
 console.log(logFileName)
 fs.writeFileSync(logFileName, `Log file created at ${now.toISOString()} GMT(+0)\n`);
 
+// log path (--contingent-percentage)
+let contgPer = "100"
+if(parameters.includes("--contingent-percentage")){
+    contgPer = parameters[parameters.indexOf("--contingent-percentage")+1];
+} 
 
 
 const inputRepString = `Script run with 
@@ -73,7 +75,7 @@ fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
 // Constants
-const contingentPercentage:BigNumber = new BigNumber(1);    // The percentage of promised airdrop distributed 
+const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);    // The percentage of promised airdrop distributed 
 const initialAirdropPercentage:BigNumber = new BigNumber(0.15)  // 
 const ten = new BigNumber(10);
 let expectedDistributedWei:BigNumber = new BigNumber(45)
@@ -85,7 +87,7 @@ const constantRepString = separatorLine + `Constants
 Contingent Percentages                      : ${contingentPercentage.multipliedBy(100).toFixed()} %
 Initial Airdrop percentage                  : ${initialAirdropPercentage.multipliedBy(100).toFixed()} %
 Total distributed Wei                       : ${expectedDistributedWei.toFixed()}
-Wei distributed at Airdrop                  : ${expectedDistributedWei.multipliedBy(initialAirdropPercentage).toFixed()}`
+Wei distributed at Airdrop                  : ${expectedDistributedWei.multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage).toFixed()}`
 
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
