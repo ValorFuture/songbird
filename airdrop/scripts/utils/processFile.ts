@@ -16,7 +16,8 @@ interface LineItem {
 }
 interface validateRes {
     validAccounts: boolean[],
-    validAccountsLen: number
+    validAccountsLen: number,
+    invalidAccountsLen: number
 }
 
 interface conversionFactorRes {
@@ -33,6 +34,7 @@ interface airdropGenesisRes {
 export function validateFile(parsedFile: LineItem[], logFile: string):validateRes {
     let validAccountsLen:number = 0;
     let validAccounts:boolean[] = []
+    let invalidAccountsLen:number = 0
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
@@ -55,9 +57,11 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
         validAccounts[lineIndex] = isValid
         if(isValid){
             validAccountsLen += 1;
+        } else {
+            invalidAccountsLen += 1;
         }
     } 
-    return {validAccounts, validAccountsLen};
+    return {validAccounts, validAccountsLen, invalidAccountsLen};
 }
 
 export function calculateConversionFactor

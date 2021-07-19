@@ -27,7 +27,12 @@ Required parameters:
 
 Optional parameters:
 ```
---override
+--log-path (default to: files/logs/)
+``` 
+
+Optional flags:
+```
+--override 
 ``` 
 
 
@@ -47,6 +52,9 @@ Fields are defined as:
 2. FLR address
 3. XRP balance at time of snapshot, to six decimals, base 10.
 
+### genesis file
+
+A file to be used as genesis init, replacing a file in `./fba-avalanche/avalanchego/genesis/genesis_scdev.go`
 
 ## What does script do
 
