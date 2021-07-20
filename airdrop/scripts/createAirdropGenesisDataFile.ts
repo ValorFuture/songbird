@@ -118,10 +118,21 @@ fs.appendFileSync(logFileName, separatorLine+"Input file processing\n");
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
      contingentPercentage, conversionFactor, initialAirdropPercentage);
 // Log balance created
+const zeroPad = (num:any, places:any) => String(num).padStart(places, '0')
 console.log(`Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}\n`);
+console.log(`Number of Flare accounts added to genesis   : ${convertedAirdropData.processedAccounts.length}`)
+fs.appendFileSync(logFileName, `Number of Flare accounts added to genesis   : ${convertedAirdropData.processedAccounts.length}\n`);
+for(let i=0; i<convertedAirdropData.accountsDistribution.length; i++){
+    if(convertedAirdropData.accountsDistribution[i]>0){
+        console.log(`Number of Flare addresses added ${zeroPad(i,3)} times   : ${convertedAirdropData.accountsDistribution[i]}`)
+        fs.appendFileSync(logFileName, `Number of Flare addresses added ${zeroPad(i,3)} times   : ${convertedAirdropData.accountsDistribution[i]}\n`);
+    }
+}
 console.log(`Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}`)
 fs.appendFileSync(logFileName, `Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}\n`);
+
+
 
 // **********************
 // Do final health checks

@@ -25,16 +25,17 @@ interface validateRes {
 interface airdropGenesisRes {
     processedAccounts: string[],
     processedAccountsLen: number,
-    processedWei: BigNumber
+    processedWei: BigNumber,
+    accountsDistribution: number[]
 }
 
 export function validateFile(parsedFile: LineItem[], logFile: string):validateRes {
     let validAccountsLen:number = 0;
-    let validAccounts:boolean[] = []
-    let invalidAccountsLen:number = 0
+    let validAccounts:boolean[] = [];
+    let invalidAccountsLen:number = 0;
     let seenXPRAddresses = new Set();
     let totalXPRBalance = new BigNumber(0);
-    let seenXPRAddressesDetail: {[name: string]: number } = {};;
+    let seenXPRAddressesDetail: {[name: string]: number } = {};
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
@@ -64,7 +65,7 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Balance is not a valid number \n`);
             isValid = false;
         }
-        validAccounts[lineIndex] = isValid
+        validAccounts[lineIndex] = isValid;
         if(isValid){
             validAccountsLen += 1;
             totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
@@ -80,27 +81,44 @@ export function createFlareAirdropGenesisData
 conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesisRes{
     let processedAccountsLen:number = 0;
     let processedAccounts:string[] = [];
-    let processedWei = new BigNumber(0)
+    let processedWei = new BigNumber(0);
+    let seenFlareAddresses = new Set<string>();
+    let flrAddDetail: {[name: string]: {balance: BigNumber, num: number} } = {};
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
             processedAccountsLen += 1
             let accBalance = new BigNumber(lineItem.XPRBalance);     
-            accBalance = accBalance.multipliedBy(contingentPercentage)
-            accBalance = accBalance.multipliedBy(conversionFactor)
+            accBalance = accBalance.multipliedBy(contingentPercentage);
+            accBalance = accBalance.multipliedBy(conversionFactor);
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);
             // rounding down to 0 decimal places
             accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);
             processedWei = processedWei.plus(accBalance);
-            processedAccounts[lineIndex] = `"${lineItem.FlareAddress.substring(2)}": {"balance": "0x${accBalance.toString(16)}" },`;
+
+            if(seenFlareAddresses.has(lineItem.FlareAddress)){
+                flrAddDetail[lineItem.FlareAddress].balance = flrAddDetail[lineItem.FlareAddress].balance.plus(accBalance);
+                flrAddDetail[lineItem.FlareAddress].num += 1;
+            }
+            else {
+                seenFlareAddresses.add(lineItem.FlareAddress);
+                flrAddDetail[lineItem.FlareAddress] = {balance: accBalance, num: 1};
+            }
         }
-        else{
-            processedAccounts[lineIndex] = ``;
-        }
+    }
+    let accountsDistribution:number[] = [];
+    for(let flrAdd of seenFlareAddresses){
+        processedAccounts.push(`"${flrAdd.substring(2)}": {"balance": "0x${flrAddDetail[flrAdd].balance.toString(16)}" },`);
+        if(accountsDistribution[flrAddDetail[flrAdd].num]){
+            accountsDistribution[flrAddDetail[flrAdd].num] += 1;  
+        } else {
+            accountsDistribution[flrAddDetail[flrAdd].num] = 1;  
+        }     
     }
     return {
         processedAccounts,
         processedAccountsLen,
-        processedWei
+        processedWei,
+        accountsDistribution
     }
 }
