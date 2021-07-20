@@ -1,0 +1,12 @@
+{
+  "name": "big-genesis",
+  "version": "1.0.0",
+  "description": "Build lots of random addresses for a big genesis file",
+  "main": "index.js",
+  "author": "Chuck Benedict",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {
+    "web3": "^1.4.0"
+  }
+}
