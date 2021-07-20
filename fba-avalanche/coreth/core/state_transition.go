@@ -35,6 +35,7 @@ import (
 	"github.com/ava-labs/coreth/core/vm"
 	"github.com/ava-labs/coreth/params"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 /*
@@ -64,6 +65,10 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+}
+
+type Keeper struct {
+	log log.Logger
 }
 
 // Message represents a message sent to a contract.
@@ -115,6 +120,23 @@ func (result *ExecutionResult) Revert() []byte {
 	return common.CopyBytes(result.ReturnData)
 }
 
+// Implement the EVMCaller interface on the state transition structure; simply delegate the calls
+func (st *StateTransition) Call(caller vm.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+	return st.evm.Call(caller, addr, input, gas, value)
+}
+
+func (st *StateTransition) GetBlockNumber() *big.Int {
+	return st.evm.Context.BlockNumber
+}
+
+func (st *StateTransition) GetGasLimit() uint64 {
+	return st.evm.Context.GasLimit
+}
+
+func (st *StateTransition) AddBalance(addr common.Address, amount *big.Int) {
+	st.state.AddBalance(addr, amount)
+}
+
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
 func IntrinsicGas(data []byte, contractCreation, isHomestead bool, isEIP2028 bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
@@ -162,6 +184,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
+		log:      log.New(),
 	}
 }
 
@@ -302,32 +325,30 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.refundGas(apricotPhase1)
 	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
-	// Trigger the keeper contract trigger method
+	// Call the keeper contract trigger method if there is no vm error
 	if vmerr == nil {
-		// Get the contract to call
-		systemTriggerContract := common.HexToAddress(GetSystemTriggerContractAddr(st.evm.Context.BlockNumber))
-		// Call the method
-		triggerRet, _, triggerErr := st.evm.Call(vm.AccountRef(systemTriggerContract), systemTriggerContract, GetSystemTriggerSelector(st.evm.Context.BlockNumber), GetKeeperGasMultiplier(st.evm.Context.BlockNumber)*st.evm.Context.GasLimit, big.NewInt(0))
-		// If no error and a value came back...
-		if triggerErr == nil && triggerRet != nil {
-			// Did we get one big int?
-			if len(triggerRet) == 32 {
-				// Convert to big int
-				mintRequest := new(big.Int).SetBytes(triggerRet)
-				// If the inflation request is greater than zero and less than max
-				if mintRequest.Cmp(big.NewInt(0)) > 0 &&
-					mintRequest.Cmp(GetMaximumInflationRequest(st.evm.Context.BlockNumber)) <= 0 {
-					// Mint the amount asked for on to the keeper contract
-					st.state.AddBalance(common.HexToAddress(GetInflationContractAddr(st.evm.Context.BlockNumber)), mintRequest)
-				}
-			}
-		}
+		st.triggerKeeperAndMint()
 	}
+
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
 		Err:        vmerr,
 		ReturnData: ret,
 	}, nil
+}
+
+func (st *StateTransition) triggerKeeperAndMint() {
+	// Call the keeper
+	mintRequest, triggerErr := triggerKeeper(st)
+	// If no error...
+	if triggerErr == nil {
+		// time to mint
+		if mintError := mint(st, mintRequest); mintError != nil {
+			st.log.Warn("Error minting inflation request", "error", mintError)
+		}
+	} else {
+		st.log.Warn("Keeper trigger in error", "error", triggerErr)
+	}
 }
 
 func (st *StateTransition) refundGas(apricotPhase1 bool) {
