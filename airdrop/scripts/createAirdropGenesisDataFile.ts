@@ -1,6 +1,6 @@
 import { BADNAME } from 'dns';
 import * as fs from 'fs';
-import {calculateConversionFactor, createFlareAirdropGenesisData, validateFile} from "./utils/processFile";
+import {createFlareAirdropGenesisData, validateFile} from "./utils/processFile";
 import { writeError } from './utils/utils';
 const Web3Utils = require('web3-utils');
 const parse = require('csv-parse/lib/sync');
@@ -75,20 +75,15 @@ fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
 // Constants
-const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);    // The percentage of promised airdrop distributed 
-const initialAirdropPercentage:BigNumber = new BigNumber(0.15)  // 
-const ten = new BigNumber(10);
-let expectedDistributedWei:BigNumber = new BigNumber(45)
-expectedDistributedWei = expectedDistributedWei.multipliedBy(ten.pow(9));
-expectedDistributedWei = expectedDistributedWei.multipliedBy(ten.pow(18));
-// We want this to be 45 bil Spark token so 45 * 10^9 * 10^18 Wei 
+const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);
+const initialAirdropPercentage:BigNumber = new BigNumber(0.15);
+const conversionFactor:BigNumber = new BigNumber(1.0073);
+let expectedFlrToDistribute:BigNumber = new BigNumber(0)
 
 const constantRepString = separatorLine + `Constants
 Contingent Percentages                      : ${contingentPercentage.multipliedBy(100).toFixed()} %
 Initial Airdrop percentage                  : ${initialAirdropPercentage.multipliedBy(100).toFixed()} %
-Total distributed Wei                       : ${expectedDistributedWei.toFixed()}
-Wei distributed at Airdrop                  : ${expectedDistributedWei.multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage).toFixed()}`
-
+Conversion Factor                           : ${conversionFactor.toFixed()}`
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
 
@@ -109,20 +104,19 @@ console.log(`Number of valid accounts                    : ${validatedData.valid
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of invalid accounts                  : ${validatedData.invalidAccountsLen}\n`);
+console.log(`Total XPR balance read                      : ${validatedData.totalXPRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total XPR balance read                      : ${validatedData.totalXPRBalance.toFixed()} \n`);
+expectedFlrToDistribute = validatedData.totalXPRBalance;
+expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor).multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage);
+console.log(`Expected Flare to distribute                : ${expectedFlrToDistribute.toFixed()}`)
+fs.appendFileSync(logFileName, `Expected Flare to distribute                : ${expectedFlrToDistribute.toFixed()} \n`);
 
 // Calculating conversion factor
 console.log(separatorLine+"Input file processing")
 fs.appendFileSync(logFileName, separatorLine+"Input file processing\n");
-let conversionFactor = calculateConversionFactor(parsed_file, validatedData, expectedDistributedWei);
-// Log conversion factor results
-console.log(`Conversion factor                           : ${conversionFactor.conversionFactor.toString()}`)
-fs.appendFileSync(logFileName, `Conversion factor                           : ${conversionFactor.conversionFactor.toString()} \n`);
-console.log(`Total XPR balance read                      : ${conversionFactor.totalXPRBalance.toFixed()}`)
-fs.appendFileSync(logFileName, `Total XPR balance read                      : ${conversionFactor.totalXPRBalance.toFixed()} \n`);
-
 // Create Flare balance json
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
-     contingentPercentage, conversionFactor.conversionFactor, initialAirdropPercentage);
+     contingentPercentage, conversionFactor, initialAirdropPercentage);
 // Log balance created
 console.log(`Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}\n`);

@@ -19,14 +19,9 @@ interface LineItem {
 interface validateRes {
     validAccounts: boolean[],
     validAccountsLen: number,
-    invalidAccountsLen: number
-}
-
-interface conversionFactorRes {
-    conversionFactor: BigNumber,
+    invalidAccountsLen: number,
     totalXPRBalance: BigNumber
 }
-
 interface airdropGenesisRes {
     processedAccounts: string[],
     processedAccountsLen: number,
@@ -38,6 +33,7 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
     let validAccounts:boolean[] = []
     let invalidAccountsLen:number = 0
     let seenXPRAddresses = new Set();
+    let totalXPRBalance = new BigNumber(0);
     let seenXPRAddressesDetail: {[name: string]: number } = {};;
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
@@ -71,28 +67,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
         validAccounts[lineIndex] = isValid
         if(isValid){
             validAccountsLen += 1;
+            totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
         } else {
             invalidAccountsLen += 1;
         }
     } 
-    return {validAccounts, validAccountsLen, invalidAccountsLen};
-}
-
-export function calculateConversionFactor
-(parsedFile: LineItem[], validAccounts: validateRes, expected_total:BigNumber): conversionFactorRes{
-    let totalXPRBalance = new BigNumber(0);
-    for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
-        if(validAccounts.validAccounts[lineIndex]){
-            let lineItem = parsedFile[lineIndex];
-            totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
-        }
-    }
-    let expectedTot = new BigNumber(expected_total);
-    const conversionFactor = expectedTot.div(totalXPRBalance);
-    return {
-        conversionFactor,
-        totalXPRBalance
-    };
+    return {validAccounts, validAccountsLen, invalidAccountsLen, totalXPRBalance};
 }
 
 export function createFlareAirdropGenesisData
