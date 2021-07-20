@@ -148,6 +148,6 @@ if(healthy){
     const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
     fs.appendFileSync(goGenesisFile, fileData);
     console.log(`Created output genesis file at              : ${goGenesisFile}`)
-    fs.appendFileSync(logFileName, `Created output genesis file at              : ${goGenesisFile} \n`);
+    fs.appendFileSync(logFileName, `Created output genesis file at              : ${goGenesisFile} \n`); 
 }
 
