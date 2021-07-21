@@ -84,7 +84,7 @@ Doing so we:
 3. Check that each balance is of an expected format
 4. Maintain the amount of lines read (valid and invalid lines)
 5. Check that there are no duplicate XPR addresses in input file
-6. Join the duplicate Flare addresses ant their balances into one balance (assuming they came from two separate XPR addresses)
+6. Join the duplicate Flare addresses and their balances into one balance (assuming they came from two separate XPR addresses)
 7. Maintain the total XPR read from input file 
 8. Maintain the total airdropped wei, and check that it is close enough to expected airdrop wei number
 
