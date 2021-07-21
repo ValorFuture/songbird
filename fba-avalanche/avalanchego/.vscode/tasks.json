@@ -1,0 +1,68 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Clean Logs",
+      "command": "rm",
+      "args": ["-rf", "${workspaceFolder}/../../logs"],
+    },
+    {
+      "label": "Clean Db",
+      "command": "rm",
+      "args": ["-rf", "${workspaceFolder}/../../db"],
+    },
+    {
+      "label": "Clean Node Dir",
+      "command": "rm",
+      "args": ["-rf", "${env:GOPATH}/pkg/mod/github.com/ava-labs/avalanche@v1.3.2"],
+    },
+    {
+      "label": "Clean Coreth Dir",
+      "command": "rm",
+      "args": ["-rf", "${env:GOPATH}/pkg/mod/github.com/ava-labs/coreth@v0.4.2-rc.4"],
+    },
+    {
+      "label": "Make Log Dir",
+      "command": "mkdir",
+      "args": ["${workspaceFolder}/../../logs"],
+    },
+    {
+      "label": "Make Node00 Log Dir",
+      "command": "mkdir",
+      "args": ["-p", "${workspaceFolder}/../../logs/node00"],
+    },
+    {
+      "label": "Make Package Dir",
+      "command": "mkdir",
+      "args": ["-p", "${env:GOPATH}/pkg/mod/github.com/ava-labs"],
+    },
+    {
+      "label": "Copy Node Dir",
+      "command": "cp",
+      "args": ["-r", ".", "${env:GOPATH}/pkg/mod/github.com/ava-labs/avalanche@v1.3.2"],
+    },
+    {
+      "label": "Copy Coreth Dir",
+      "command": "cp",
+      "args": ["-r", "../coreth", "${env:GOPATH}/pkg/mod/github.com/ava-labs/coreth@v0.4.2-rc.4"],
+    },
+    {
+      "label": "Build Avago",
+      "command": "${workspaceFolder}/scripts/build.sh",
+    },
+    {
+      "label": "Prepare",
+      "dependsOn": [
+        "Clean Logs", 
+        "Clean Db", 
+        "Make Log Dir", 
+        "Make Node00 Log Dir", 
+        "Make Package Dir", 
+        "Copy Node Dir", 
+        "Copy Coreth Dir",
+        "Build Avago"
+      ],
+      "dependsOrder": "sequence"
+    }
+  ]
+}
