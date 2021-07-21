@@ -121,8 +121,10 @@ console.log(`Number of valid accounts                    : ${validatedData.valid
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of invalid accounts                  : ${validatedData.invalidAccountsLen}\n`);
-console.log(`Total XPR valid balance read                : ${validatedData.totalXPRBalance.toFixed()}`)
+console.log(`Total valid XPR balance read                : ${validatedData.totalXPRBalance.toFixed()}`)
 fs.appendFileSync(logFileName, `Total valid XPR balance read                : ${validatedData.totalXPRBalance.toFixed()} \n`);
+console.log(`Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()} \n`);
 let expectedFlrToDistribute:BigNumber = new BigNumber(0);
 expectedFlrToDistribute = validatedData.totalXPRBalance;
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor).multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage);
