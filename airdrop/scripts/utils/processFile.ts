@@ -20,7 +20,8 @@ interface validateRes {
     validAccounts: boolean[],
     validAccountsLen: number,
     invalidAccountsLen: number,
-    totalXPRBalance: BigNumber
+    totalXPRBalance: BigNumber,
+    invalidXPRBalance: BigNumber,
 }
 interface airdropGenesisRes {
     processedAccounts: string[],
@@ -35,10 +36,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
     let invalidAccountsLen:number = 0;
     let seenXPRAddresses = new Set();
     let totalXPRBalance = new BigNumber(0);
+    let invalidXPRBalance = new BigNumber(0);
     let seenXPRAddressesDetail: {[name: string]: number } = {};
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
+        let isValidNum = true;
         if(!RippleApi.isValidAddress(lineItem.XPRAddress)){
             console.log(`Line ${lineIndex + 2}: XPR address is invalid`);
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: XPR address is invalid \n`);
@@ -59,11 +62,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Flare address is invalid \n`);
             isValid = false;
         }
-        let numberBalance = +lineItem.XPRBalance;
+        let numberBalance = parseInt(lineItem.XPRBalance,10);
         if(isNaN(numberBalance)){
             console.log(`Line ${lineIndex + 2}: Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Balance is not a valid number \n`);
             isValid = false;
+            isValidNum = false;
         }
         validAccounts[lineIndex] = isValid;
         if(isValid){
@@ -71,9 +75,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
             totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
         } else {
             invalidAccountsLen += 1;
+            if (isValidNum) {
+                invalidXPRBalance = invalidXPRBalance.plus(lineItem.XPRBalance);
+            }
         }
     } 
-    return {validAccounts, validAccountsLen, invalidAccountsLen, totalXPRBalance};
+    return {validAccounts, validAccountsLen, invalidAccountsLen, totalXPRBalance, invalidXPRBalance};
 }
 
 export function createFlareAirdropGenesisData
