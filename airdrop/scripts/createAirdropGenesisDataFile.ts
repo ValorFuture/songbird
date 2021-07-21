@@ -9,6 +9,10 @@ import { createGenesisFileData } from './utils/genesisFile';
 
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
 
+// CONSTANTS
+const initialAirdropPercentage:BigNumber = new BigNumber(0.15);
+const conversionFactor:BigNumber = new BigNumber(1.0073);
+
 const separatorLine = "--------------------------------------------------------------------------------\n"
 
 // parse CLI parameter
@@ -64,7 +68,7 @@ let contgPer = "100"
 if(parameters.includes("--contingent-percentage")){
     contgPer = parameters[parameters.indexOf("--contingent-percentage")+1];
 } 
-
+const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);
 
 const inputRepString = `Script run with 
 --snapshot-file                             : ${snapshotFile}
@@ -73,12 +77,6 @@ const inputRepString = `Script run with
 --log-path                                  : ${logPath}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
-
-// Constants
-const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);
-const initialAirdropPercentage:BigNumber = new BigNumber(0.15);
-const conversionFactor:BigNumber = new BigNumber(1.0073);
-let expectedFlrToDistribute:BigNumber = new BigNumber(0)
 
 const constantRepString = separatorLine + `Constants
 Contingent Percentages                      : ${contingentPercentage.multipliedBy(100).toFixed()} %
@@ -104,8 +102,9 @@ console.log(`Number of valid accounts                    : ${validatedData.valid
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of invalid accounts                  : ${validatedData.invalidAccountsLen}\n`);
-console.log(`Total XPR balance read                      : ${validatedData.totalXPRBalance.toFixed()}`)
-fs.appendFileSync(logFileName, `Total XPR balance read                      : ${validatedData.totalXPRBalance.toFixed()} \n`);
+console.log(`Total XPR valid balance read                : ${validatedData.totalXPRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total valid XPR balance read                : ${validatedData.totalXPRBalance.toFixed()} \n`);
+let expectedFlrToDistribute:BigNumber = new BigNumber(0);
 expectedFlrToDistribute = validatedData.totalXPRBalance;
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor).multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage);
 console.log(`Expected Flare to distribute                : ${expectedFlrToDistribute.toFixed()}`)
@@ -131,7 +130,6 @@ for(let i=0; i<convertedAirdropData.accountsDistribution.length; i++){
 }
 console.log(`Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}`)
 fs.appendFileSync(logFileName, `Total FLR added to accounts                 : ${convertedAirdropData.processedWei.toFixed()}\n`);
-
 
 
 // **********************
