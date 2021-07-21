@@ -13,31 +13,61 @@ BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
 const initialAirdropPercentage:BigNumber = new BigNumber(0.15);
 const conversionFactor:BigNumber = new BigNumber(1.0073);
 
-const separatorLine = "--------------------------------------------------------------------------------\n"
+var { argv } = require("yargs")
+    .scriptName("airdrop")
+    .option("f", {
+        alias: "snapshot-file",
+        describe: "Path to snapshot file",
+        demandOption: "Snapshot file is required",
+        type: "string",
+        nargs: 1,
+    })
+    .option("g", {
+        alias: "genesis-file",
+        describe: "Genesis data file for output (.go)",
+        demandOption: "Genesis data file is required",
+        type: "string",
+        nargs: 1
+    })
+    .option("o", {
+        alias: "override",
+        describe: "if provided genesis data file will override the one at provided destination if there is one",
+        nargs: 0
+    })
+    .option("l", {
+        alias: "log-path",
+        describe: "log data path",
+        type: "string",
+        default: "files/logs/",
+        nargs: 1
+    })
+    .option("c", {
+        alias: "contingent-percentage",
+        describe: "contingent-percentage to be used at the airdrop, default to 100%",
+        type: "number",
+        default: 100,
+        choices: [...Array(101).keys()],
+        nargs: 1
+    })
+    .fail(function (msg:any, err:any, yargs:any) {
+        if (err) throw err;
+        console.error("Exiting with message")
+        console.error(msg);
+        console.error(yargs.help())
+        process.exit(0);
+    })
 
-// parse CLI parameter
-const parameters = process.argv.slice(2)
-// Snapshot file (--snapshot-file)
-if(!parameters.includes("--snapshot-file")){
-    console.log("You must provide snapshot file with --snapshot-file flag");
-    process.exit(0);
-}
-const snapshotFile = parameters[parameters.indexOf("--snapshot-file")+1]
-// go Genesis output file (--genesis-file)
-if(!parameters.includes("--genesis-file")){
-    console.log("You must provide go output file for genesis with --genesis-file flag");
-    process.exit(0);
-}
-const goGenesisFile = parameters[parameters.indexOf("--genesis-file")+1]
-// go genesis override flag (--override)
-const canOverwriteGenesis = parameters.includes("--override")
-if (fs.existsSync(goGenesisFile)) {
-    if(!canOverwriteGenesis){
+const { snapshotFile, genesisFile, override, logPath } = argv;
+let {contingentPercentage} = argv;
+contingentPercentage = new BigNumber(contingentPercentage).dividedBy(100)
+const separatorLine = "--------------------------------------------------------------------------------\n"
+if (fs.existsSync(genesisFile)) {
+    if(!override){
         console.log("go Genesis file already exist, if you want to overwrite it provide --override");
         process.exit(0);
     }
     else {
-        fs.writeFile(goGenesisFile, '', function (err) {
+        fs.writeFile(genesisFile, '', function (err) {
             if (err) {
                 console.log("Can't create file at provided destination")
                 throw err
@@ -46,34 +76,23 @@ if (fs.existsSync(goGenesisFile)) {
     }
     // File exists in path
   } else {
-    fs.writeFile(goGenesisFile, '', function (err) {
+    fs.writeFile(genesisFile, '', function (err) {
         if (err) {
             console.log("Can't create file at provided destination")
             throw err
         };
       });
   }
-// log path (--log-path)
-let logPath = "files/logs/";
-if(parameters.includes("--log-path")){
-    logPath = parameters[parameters.indexOf("--log-path")+1];
-} 
+
 const now = new Date()
 const logFileName = logPath+`${now.toISOString()}_airdrop_data_gen_log.txt`;
 console.log(logFileName)
 fs.writeFileSync(logFileName, `Log file created at ${now.toISOString()} GMT(+0)\n`);
 
-// log path (--contingent-percentage)
-let contgPer = "100"
-if(parameters.includes("--contingent-percentage")){
-    contgPer = parameters[parameters.indexOf("--contingent-percentage")+1];
-} 
-const contingentPercentage:BigNumber = new BigNumber(contgPer).dividedBy(100);
-
 const inputRepString = `Script run with 
 --snapshot-file                             : ${snapshotFile}
---genesis-file                              : ${goGenesisFile}
---override                                  : ${canOverwriteGenesis}
+--genesis-file                              : ${genesisFile}
+--override                                  : ${override}
 --log-path                                  : ${logPath}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
@@ -115,7 +134,7 @@ console.log(separatorLine+"Input file processing")
 fs.appendFileSync(logFileName, separatorLine+"Input file processing\n");
 // Create Flare balance json
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
-     contingentPercentage, conversionFactor, initialAirdropPercentage);
+    contingentPercentage, conversionFactor, initialAirdropPercentage);
 // Log balance created
 const zeroPad = (num:any, places:any) => String(num).padStart(places, '0')
 console.log(`Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}`)
@@ -144,8 +163,8 @@ fs.appendFileSync(logFileName, `Read and processed account number match     : ${
 
 if(healthy){
     const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
-    fs.appendFileSync(goGenesisFile, fileData);
-    console.log(`Created output genesis file at              : ${goGenesisFile}`)
-    fs.appendFileSync(logFileName, `Created output genesis file at              : ${goGenesisFile} \n`); 
+    fs.appendFileSync(genesisFile, fileData);
+    console.log(`Created output genesis file at              : ${genesisFile}`)
+    fs.appendFileSync(logFileName, `Created output genesis file at              : ${genesisFile} \n`); 
 }
 
