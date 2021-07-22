@@ -117,10 +117,11 @@ if(header){
 }
 // Parse the CSV file
 let data = fs.readFileSync(snapshotFile, "utf8");
-const parsed_file = parse(data, {
+const parsed_file = parse( data, {
   columns: columns,
   skip_empty_lines: true,
-  delimiter: ','
+  delimiter: ',',
+  skip_lines_with_error: true
 })
 
 console.log(separatorLine+"Input file problems")
