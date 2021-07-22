@@ -3,8 +3,8 @@ if [[ $(pwd) =~ " " ]]; then echo "Working directory path contains a folder with
 if [ -z ${GOPATH+x} ]; then echo "GOPATH is not set, visit https://github.com/golang/go/wiki/SettingGOPATH" && exit; fi
 WORKING_DIR=$(pwd)
 
-sudo rm -rf $GOPATH/src/github.com/ava-labs
-sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
+rm -rf $GOPATH/src/github.com/ava-labs
+rm -rf $GOPATH/pkg/mod/github.com/ava-labs
 go get -v -d github.com/ava-labs/avalanchego/...
 cd $GOPATH/src/github.com/ava-labs/avalanchego
 git checkout ac32de45ffd6769007f250f123a5d5dae8230456
