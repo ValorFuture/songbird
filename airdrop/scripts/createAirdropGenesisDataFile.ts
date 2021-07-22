@@ -22,6 +22,13 @@ var { argv } = require("yargs")
         type: "string",
         nargs: 1,
     })
+    .option("h", {
+        alias: "header",
+        describe: "Flag that tells us if input csv file has header",
+        default: false,
+        type: "boolean",
+        nargs: 1,
+    })
     .option("g", {
         alias: "genesis-file",
         describe: "Genesis data file for output (.go)",
@@ -57,7 +64,7 @@ var { argv } = require("yargs")
         process.exit(0);
     })
 
-const { snapshotFile, genesisFile, override, logPath } = argv;
+const { snapshotFile, genesisFile, override, logPath, header } = argv;
 let {contingentPercentage} = argv;
 contingentPercentage = new BigNumber(contingentPercentage).dividedBy(100)
 const separatorLine = "--------------------------------------------------------------------------------\n"
@@ -104,10 +111,14 @@ Conversion Factor                           : ${conversionFactor.toFixed()}`
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
 
+let columns:string[] | boolean = ['XPRAddress','FlareAddress','XPRBalance'];
+if(header){
+    columns = true
+}
 // Parse the CSV file
 let data = fs.readFileSync(snapshotFile, "utf8");
 const parsed_file = parse(data, {
-  columns: true,
+  columns: columns,
   skip_empty_lines: true,
   delimiter: ','
 })

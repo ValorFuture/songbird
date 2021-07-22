@@ -42,15 +42,16 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
         let isValidNum = true;
+        let readableIndex = lineIndex + 2;
         if(!RippleApi.isValidAddress(lineItem.XPRAddress)){
-            console.log(`Line ${lineIndex + 2}: XPR address is invalid`);
-            fs.appendFileSync(logFile, `Line ${lineIndex + 2}: XPR address is invalid \n`);
+            console.log(`Line ${readableIndex}: XPR address is invalid`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is invalid \n`);
             isValid = false;
         }
         if(seenXPRAddresses.has(lineItem.XPRAddress)){
             // We have already seen this XPR address
-            console.log(`Line ${lineIndex + 2}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}`);
-            fs.appendFileSync(logFile, `Line ${lineIndex + 2}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}\n`);
+            console.log(`Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}\n`);
             isValid = false;
         }
         if(!seenXPRAddresses.has(lineItem.XPRAddress)){
@@ -58,14 +59,14 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
             seenXPRAddressesDetail[lineItem.XPRAddress] = lineIndex;
         } 
         if(!Web3Utils.isAddress(lineItem.FlareAddress)){
-            console.log(`Line ${lineIndex + 2}: Flare address is invalid`);
-            fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Flare address is invalid \n`);
+            console.log(`Line ${readableIndex}: Flare address is invalid`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: Flare address is invalid \n`);
             isValid = false;
         }
         let numberBalance = parseInt(lineItem.XPRBalance,10);
         if(isNaN(numberBalance)){
-            console.log(`Line ${lineIndex + 2}: Balance is not a valid number`);
-            fs.appendFileSync(logFile, `Line ${lineIndex + 2}: Balance is not a valid number \n`);
+            console.log(`Line ${readableIndex}: Balance is not a valid number`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: Balance is not a valid number \n`);
             isValid = false;
             isValidNum = false;
         }
