@@ -67,10 +67,6 @@ type StateTransition struct {
 	evm        *vm.EVM
 }
 
-type Keeper struct {
-	log log.Logger
-}
-
 // Message represents a message sent to a contract.
 type Message interface {
 	From() common.Address
@@ -184,7 +180,6 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
-		log:      log.New(),
 	}
 }
 
@@ -326,8 +321,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	// Call the keeper contract trigger method if there is no vm error
+	log := log.New()
 	if vmerr == nil {
-		st.triggerKeeperAndMint()
+		triggerKeeperAndMint(st, log)
 	}
 
 	return &ExecutionResult{
@@ -335,20 +331,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		Err:        vmerr,
 		ReturnData: ret,
 	}, nil
-}
-
-func (st *StateTransition) triggerKeeperAndMint() {
-	// Call the keeper
-	mintRequest, triggerErr := triggerKeeper(st)
-	// If no error...
-	if triggerErr == nil {
-		// time to mint
-		if mintError := mint(st, mintRequest); mintError != nil {
-			st.log.Warn("Error minting inflation request", "error", mintError)
-		}
-	} else {
-		st.log.Warn("Keeper trigger in error", "error", triggerErr)
-	}
 }
 
 func (st *StateTransition) refundGas(apricotPhase1 bool) {

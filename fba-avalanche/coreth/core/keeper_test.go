@@ -7,6 +7,7 @@ import (
 
 	"github.com/ava-labs/coreth/core/vm"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // Define a mock structure to spy and mock values for keeper calls
@@ -342,5 +343,53 @@ func TestKeeperTriggerShouldNotErrorMintingZero(t *testing.T) {
 		}
 	} else {
 		t.Errorf("unexpected error returned; was %s", err.Error())
+	}
+}
+
+func TestKeeperTriggerFiredAndMinted(t *testing.T) {
+	mintRequestReturn, _ := new(big.Int).SetString("50000000000000000000000000", 10)
+	mockEVMCallerData := &MockEVMCallerData{
+		blockNumber:       *big.NewInt(0),
+		gasLimit:          0,
+		mintRequestReturn: *mintRequestReturn,
+	}
+	defaultEVMMock := &DefaultEVMMock{
+		mockEVMCallerData: *mockEVMCallerData,
+	}
+
+	log := log.New()
+	triggerKeeperAndMint(defaultEVMMock, log)
+
+	// EVM Call function calling the keeper should have been cqlled
+	if defaultEVMMock.mockEVMCallerData.callCalls != 1 {
+		t.Errorf("EVM Call count not as expected. got %d want 1", defaultEVMMock.mockEVMCallerData.callCalls)
+	}
+	// AddBalance should have been called on the state database, minting the request asked for
+	if defaultEVMMock.mockEVMCallerData.addBalanceCalls != 1 {
+		t.Errorf("Add balance call count not as expected. got %d want 1", defaultEVMMock.mockEVMCallerData.addBalanceCalls)
+	}
+}
+
+func TestKeeperTriggerShouldNotMintMoreThanLimit(t *testing.T) {
+	mintRequestReturn, _ := new(big.Int).SetString("50000000000000000000000001", 10)
+	mockEVMCallerData := &MockEVMCallerData{
+		blockNumber:       *big.NewInt(0),
+		gasLimit:          0,
+		mintRequestReturn: *mintRequestReturn,
+	}
+	defaultEVMMock := &DefaultEVMMock{
+		mockEVMCallerData: *mockEVMCallerData,
+	}
+
+	log := log.New()
+	triggerKeeperAndMint(defaultEVMMock, log)
+
+	// EVM Call function calling the keeper should have been cqlled
+	if defaultEVMMock.mockEVMCallerData.callCalls != 1 {
+		t.Errorf("EVM Call count not as expected. got %d want 1", defaultEVMMock.mockEVMCallerData.callCalls)
+	}
+	// AddBalance should not have been called on the state database, as the mint request was over the limit
+	if defaultEVMMock.mockEVMCallerData.addBalanceCalls != 0 {
+		t.Errorf("Add balance call count not as expected. got %d want 1", defaultEVMMock.mockEVMCallerData.addBalanceCalls)
 	}
 }

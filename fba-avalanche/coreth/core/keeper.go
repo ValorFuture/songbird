@@ -6,6 +6,7 @@ import (
 
 	"github.com/ava-labs/coreth/core/vm"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // Define errors
@@ -120,4 +121,18 @@ func mint(evm EVMCaller, mintRequest *big.Int) error {
 	}
 	// No error
 	return nil
+}
+
+func triggerKeeperAndMint(evm EVMCaller, log log.Logger) {
+	// Call the keeper
+	mintRequest, triggerErr := triggerKeeper(evm)
+	// If no error...
+	if triggerErr == nil {
+		// time to mint
+		if mintError := mint(evm, mintRequest); mintError != nil {
+			log.Warn("Error minting inflation request", "error", mintError)
+		}
+	} else {
+		log.Warn("Keeper trigger in error", "error", triggerErr)
+	}
 }
