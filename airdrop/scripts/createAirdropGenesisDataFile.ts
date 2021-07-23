@@ -7,6 +7,7 @@ const parse = require('csv-parse/lib/sync');
 import BigNumber from "bignumber.js";
 import { createGenesisFileData } from './utils/genesisFile';
 
+const TEN = new BigNumber(10);
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
 
 // CONSTANTS
@@ -139,9 +140,12 @@ console.log(`Total invalid XPR balance read              : ${validatedData.inval
 fs.appendFileSync(logFileName, `Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()} \n`);
 let expectedFlrToDistribute:BigNumber = new BigNumber(0);
 expectedFlrToDistribute = validatedData.totalXPRBalance;
-expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor).multipliedBy(contingentPercentage).multipliedBy(initialAirdropPercentage);
-console.log(`Expected Flare to distribute                : ${expectedFlrToDistribute.toFixed()}`)
-fs.appendFileSync(logFileName, `Expected Flare to distribute                : ${expectedFlrToDistribute.toFixed()} \n`);
+expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor)
+expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(contingentPercentage)
+expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(initialAirdropPercentage);
+expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(TEN.pow(12));
+console.log(`Expected Flare to distribute (in Wei)       : ${expectedFlrToDistribute.toFixed()}`)
+fs.appendFileSync(logFileName, `Expected Flare to distribute (in Wei)       : ${expectedFlrToDistribute.toFixed()} \n`);
 
 // Calculating conversion factor
 console.log(separatorLine+"Input file processing")

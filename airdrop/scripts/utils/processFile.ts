@@ -5,6 +5,7 @@ import { writeError } from './utils';
 import BigNumber from "bignumber.js";
 import { removeUndefined } from 'ripple-lib/dist/npm/common';
 
+const TEN = new BigNumber(10);
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
 
 const RippleApi = new RippleAPI({
@@ -100,10 +101,11 @@ conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesi
             accBalance = accBalance.multipliedBy(contingentPercentage);
             accBalance = accBalance.multipliedBy(conversionFactor);
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);
+            // To get from XPR to 6 decimal places to Wei (Flare to 18 decimal places)
+            accBalance = accBalance.multipliedBy(TEN.pow(12));
             // rounding down to 0 decimal places
             accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);
             processedWei = processedWei.plus(accBalance);
-
             if(seenFlareAddresses.has(lineItem.FlareAddress)){
                 flrAddDetail[lineItem.FlareAddress].balance = flrAddDetail[lineItem.FlareAddress].balance.plus(accBalance);
                 flrAddDetail[lineItem.FlareAddress].num += 1;
