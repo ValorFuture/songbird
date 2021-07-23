@@ -21,6 +21,11 @@ type MockEVMCallerData struct {
 	lastAddBalanceAmount *big.Int
 }
 
+// Define a mock structure to spy and mock values for logger calls
+type MockLoggerData struct {
+	warnCalls int
+}
+
 // Set up default mock method calls
 func defautCall(e *MockEVMCallerData, caller vm.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	e.callCalls++
@@ -197,6 +202,53 @@ func TestKeeperTriggerReturnsCallError(t *testing.T) {
 		if err.Error() != "Call error happened" {
 			t.Errorf("did not get expected error")
 		}
+	}
+}
+
+type LoggerMock struct {
+	mockLoggerData MockLoggerData
+}
+
+func (l *LoggerMock) New(ctx ...interface{}) log.Logger {
+	return nil
+}
+
+func (l *LoggerMock) GetHandler() log.Handler {
+	return nil
+}
+
+func (l *LoggerMock) SetHandler(h log.Handler) {
+}
+
+func (l *LoggerMock) Trace(msg string, ctx ...interface{}) {}
+func (l *LoggerMock) Debug(msg string, ctx ...interface{}) {}
+func (l *LoggerMock) Info(msg string, ctx ...interface{})  {}
+func (l *LoggerMock) Error(msg string, ctx ...interface{}) {}
+func (l *LoggerMock) Crit(msg string, ctx ...interface{})  {}
+
+func (l *LoggerMock) Warn(msg string, ctx ...interface{}) {
+	l.mockLoggerData.warnCalls++
+}
+
+func TestKeeperTriggerAndMintLogsError(t *testing.T) {
+	// Assemble
+	// Set up mock EVM call to return an error
+	mockEVMCallerData := &MockEVMCallerData{}
+	badTriggerCallEVMMock := &BadTriggerCallEVMMock{
+		mockEVMCallerData: *mockEVMCallerData,
+	}
+	// Set up a mock logger
+	mockLoggerData := &MockLoggerData{}
+	loggerMock := &LoggerMock{
+		mockLoggerData: *mockLoggerData,
+	}
+
+	// Act
+	triggerKeeperAndMint(badTriggerCallEVMMock, loggerMock)
+
+	// Assert
+	if loggerMock.mockLoggerData.warnCalls != 1 {
+		t.Errorf("Logger.Warn not called as expected")
 	}
 }
 
