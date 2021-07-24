@@ -16,28 +16,37 @@ One can then run the script
 ```
 yarn ts-node scripts/createAirdropGenesisDataFile.ts
 ``` 
+or
+```
+yarn airdrop
+``` 
 Note that one needs to provide additional parameters that are described 
 more thoroughly in input parameters section.
 
-Required parameters:
-```
---snapshot-file 
---genesis-file 
-``` 
+one can alway show help with `--help` flag
 
-Optional parameters:
 ```
---log-path  (default to: files/logs/)
---contingent-percentage  (default to: 100)
-``` 
-
-Optional flags:
-```
---override (if provided it will override genesis file at provided destination if file already exists)
+yarn airdrop --help
 ``` 
 
 
 ## Input parameters
+```
+Options:
+      --help                   Show help                               [boolean]
+      --version                Show version number                     [boolean]
+  -f, --snapshot-file          Path to snapshot file         [string] [required]
+  -h, --header                 Flag that tells us if input csv file has header
+                                                      [boolean] [default: false]
+  -g, --genesis-file           Genesis data file for output (.go)
+                                                             [string] [required]
+  -o, --override               if provided genesis data file will override the
+                               one at provided destination if there is one
+  -l, --log-path               log data path   [string] [default: "files/logs/"]
+  -c, --contingent-percentage  contingent-percentage to be used at the airdrop,
+                               default to 100%
+    [number] [choices: 0 - 100 (whole numbers only)] [default: 100]
+``` 
 ### Snapshot file
 
 The file that holds snapshot data 
