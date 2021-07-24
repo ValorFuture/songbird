@@ -12,7 +12,7 @@ const RippleApi = new RippleAPI({
     server: 'wss://s1.ripple.com' // Public rippled server hosted by Ripple, Inc.
   });
 
-interface LineItem {
+export interface LineItem {
     XPRAddress: string,
     FlareAddress: string,
     XPRBalance: string

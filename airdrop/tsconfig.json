@@ -8,7 +8,7 @@
     },
     "include": [
       "./scripts",
-    ],
-    // "files": ["./hardhat.config.ts"]
+      "./test",
+    ]
   }
   
