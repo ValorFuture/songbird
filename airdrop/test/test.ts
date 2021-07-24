@@ -31,11 +31,14 @@ describe('Processing testing', function() {
         XPRBalance:"14133728449708000000000"}
       ];
       let loging = ""
-      let outout = processFile.validateFile(data,loging);
+      let processedFileData = processFile.validateFile(data,loging);
 
-      console.log(outout)
-
-      assert.equal([1, 2, 3].indexOf(4), -1);
+      assert.equal(processedFileData.validAccounts.length, 10);
+      assert.equal(processedFileData.validAccounts[0], true);
+      assert.equal(processedFileData.validAccounts[1], true);
+      assert.equal(processedFileData.validAccounts[2], true);
+      assert.equal(processedFileData.validAccountsLen, 10);
+      assert.equal(processedFileData.invalidAccountsLen, 0);
     });
   });
 });
