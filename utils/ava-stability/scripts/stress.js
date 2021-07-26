@@ -6,17 +6,33 @@
 const hre = require("hardhat");
 const counters = [];
 const promises = [];
+const stats = [];
 let signers = [];
+let executionTimeMs = 0;
+let maxTimeMs = 0;
+let minTimeMs = Number.MAX_VALUE;
+let startMs = Date.now();
 
-const makeIncrementPromise = (i) => {
+const makeIncrementPromise = (i, offset) => {
   return new Promise(async (resolve) => {
-    await counters[i].connect(signers[i]).increment()
+    stats[i].attempts += 1;
+    stats[i].lastStartTs = Date.now();
+    await counters[i].connect(signers[i + offset]).increment()
       .then(async (tx) => {
         // wait until the transaction is mined
         await tx.wait()
           .then(async (receipt) => {
             await counters[i].count()
               .then((count) => {
+                let elapsed = Date.now() - stats[i].lastStartTs;
+                executionTimeMs += elapsed;
+                if (elapsed < minTimeMs) {
+                  minTimeMs = elapsed;
+                }
+                if (elapsed > maxTimeMs) {
+                  maxTimeMs = elapsed;
+                }
+                stats[i].successes = count;
                 console.log(`counters[${i}] = ${counters[i].address}; count = ${count.toString()}`);
                 resolve(i);
               })
@@ -55,9 +71,16 @@ async function main() {
     type: "number",
     nargs: 1,
   })
+  .option("o", {
+    alias: "offset",
+    describe: "The number signers to offset in case multiple client applications are run.",
+    default: 0,
+    type: "number",
+    nargs: 1,
+  })
   .describe("help", "Show help."); // Override --help usage message.
 
-  const { threads } = argv;
+  const { threads, offset } = argv;
 
   // Deploy the Counter contract
   const Counter = await hre.ethers.getContractFactory("Counter");
@@ -72,15 +95,25 @@ async function main() {
 
 //  nonce = await hre.web3.eth.getTransactionCount(hre.web3.eth.accounts.privateKeyToAccount(hre.network.config.accounts[0]).address);
 
-  // Prime promises for each contract
+  // Prime promises and stats for each contract
   for (let i = 0; i < threads; i++) {
-    promises[i] = makeIncrementPromise(i);
+    stats[i] = { attempts: 0, successes: 0, lastStartTs: 0 }
+    promises[i] = makeIncrementPromise(i, offset);
   }
+  
+  // Spew out stats
+  setInterval(() => {
+    let txCount = 0;
+    let txAttempt = 0;
+    stats.map((stat) => {txCount += Number(stat.successes)});
+    stats.map((stat) => {txAttempt += Number(stat.attempts)});
+    console.log(`Attempts = ${txAttempt}; Tx count = ${txCount}; TPS = ${txCount / ((Date.now() - startMs) / 1000)}; Avg ms = ${executionTimeMs / txCount}; Max ms = ${maxTimeMs}; Min ms = ${minTimeMs}`)
+  }, 5000);
 
   // Spin forever and pound the validator with transactions
   while(true) {
     const index = await Promise.race(promises);
-    promises[index] = makeIncrementPromise(index);
+    promises[index] = makeIncrementPromise(index, offset);
   }
 }
 
