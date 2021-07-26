@@ -13,9 +13,9 @@ const RippleApi = new RippleAPI({
   });
 
 export interface LineItem {
-    XPRAddress: string,
+    XRPAddress: string,
     FlareAddress: string,
-    XPRBalance: string
+    XRPBalance: string
 }
 interface validateRes {
     validAccounts: boolean[],
@@ -44,27 +44,27 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
         let isValid = true;
         let isValidNum = true;
         let readableIndex = lineIndex + 2;
-        if(!RippleApi.isValidAddress(lineItem.XPRAddress)){
+        if(!RippleApi.isValidAddress(lineItem.XRPAddress)){
             console.log(`Line ${readableIndex}: XPR address is invalid`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is invalid \n`);
             isValid = false;
         }
-        if(seenXPRAddresses.has(lineItem.XPRAddress)){
+        if(seenXPRAddresses.has(lineItem.XRPAddress)){
             // We have already seen this XPR address
-            console.log(`Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}`);
-            fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XPRAddress]}\n`);
+            console.log(`Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}\n`);
             isValid = false;
         }
-        if(!seenXPRAddresses.has(lineItem.XPRAddress)){
-            seenXPRAddresses.add(lineItem.XPRAddress);
-            seenXPRAddressesDetail[lineItem.XPRAddress] = lineIndex;
+        if(!seenXPRAddresses.has(lineItem.XRPAddress)){
+            seenXPRAddresses.add(lineItem.XRPAddress);
+            seenXPRAddressesDetail[lineItem.XRPAddress] = lineIndex;
         } 
         if(!Web3Utils.isAddress(lineItem.FlareAddress)){
             console.log(`Line ${readableIndex}: Flare address is invalid`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: Flare address is invalid \n`);
             isValid = false;
         }
-        let numberBalance = parseInt(lineItem.XPRBalance,10);
+        let numberBalance = parseInt(lineItem.XRPBalance,10);
         if(isNaN(numberBalance)){
             console.log(`Line ${readableIndex}: Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: Balance is not a valid number \n`);
@@ -74,11 +74,11 @@ export function validateFile(parsedFile: LineItem[], logFile: string):validateRe
         validAccounts[lineIndex] = isValid;
         if(isValid){
             validAccountsLen += 1;
-            totalXPRBalance = totalXPRBalance.plus(lineItem.XPRBalance);
+            totalXPRBalance = totalXPRBalance.plus(lineItem.XRPBalance);
         } else {
             invalidAccountsLen += 1;
             if (isValidNum) {
-                invalidXPRBalance = invalidXPRBalance.plus(lineItem.XPRBalance);
+                invalidXPRBalance = invalidXPRBalance.plus(lineItem.XRPBalance);
             }
         }
     } 
@@ -97,7 +97,7 @@ conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesi
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
             processedAccountsLen += 1
-            let accBalance = new BigNumber(lineItem.XPRBalance);     
+            let accBalance = new BigNumber(lineItem.XRPBalance);     
             accBalance = accBalance.multipliedBy(contingentPercentage);
             accBalance = accBalance.multipliedBy(conversionFactor);
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);

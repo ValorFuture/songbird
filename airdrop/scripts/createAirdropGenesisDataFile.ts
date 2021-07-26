@@ -112,7 +112,7 @@ Conversion Factor                           : ${conversionFactor.toFixed()}`
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
 
-let columns:string[] | boolean = ['XPRAddress','FlareAddress','XPRBalance'];
+let columns:string[] | boolean = ['XRPAddress','FlareAddress','XRPBalance'];
 if(header){
     columns = true
 }
