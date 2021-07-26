@@ -6,6 +6,7 @@ import BigNumber from "bignumber.js";
 import { removeUndefined } from 'ripple-lib/dist/npm/common';
 
 const TEN = new BigNumber(10);
+const indexOffset = 2;
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR, DECIMAL_PLACES: 20 })
 
 const RippleApi = new RippleAPI({
@@ -15,7 +16,12 @@ const RippleApi = new RippleAPI({
 export interface LineItem {
     XRPAddress: string,
     FlareAddress: string,
-    XRPBalance: string
+    XRPBalance: string,
+    FlareBalance: string
+}
+export interface ProcessedAccount {
+    FlareAddress: string,
+    FlareBalance: string
 }
 interface validateRes {
     validAccounts: boolean[],
@@ -25,7 +31,7 @@ interface validateRes {
     invalidXPRBalance: BigNumber,
 }
 interface airdropGenesisRes {
-    processedAccounts: string[],
+    processedAccounts: ProcessedAccount[],
     processedAccountsLen: number,
     processedWei: BigNumber,
     accountsDistribution: number[]
@@ -43,7 +49,7 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
         let isValidNum = true;
-        let readableIndex = lineIndex + 1;
+        let readableIndex = lineIndex + indexOffset;
         if(!RippleApi.isValidAddress(lineItem.XRPAddress)){
             if(logConsole) console.log(`Line ${readableIndex}: XPR address is invalid`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XPR address is invalid \n`);
@@ -87,24 +93,34 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
 
 export function createFlareAirdropGenesisData
 (parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: BigNumber,
-conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesisRes{
+conversionFactor: BigNumber, initialAirdropPercentage: BigNumber, logFile: string, 
+logConsole: boolean = true):airdropGenesisRes{
     let processedAccountsLen:number = 0;
-    let processedAccounts:string[] = [];
+    let processedAccounts:ProcessedAccount[] = [];
     let processedWei = new BigNumber(0);
     let seenFlareAddresses = new Set<string>();
     let flrAddDetail: {[name: string]: {balance: BigNumber, num: number} } = {};
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
+        let readableIndex = lineIndex + indexOffset;
         if(validAccounts.validAccounts[lineIndex]){
             let lineItem = parsedFile[lineIndex];
             processedAccountsLen += 1
-            let accBalance = new BigNumber(lineItem.XRPBalance);     
+            let accBalance = new BigNumber(lineItem.XRPBalance);  
+            accBalance = accBalance.multipliedBy(conversionFactor);  
+            let expectedBalance = new BigNumber(lineItem.FlareBalance);
+            // Check that balances are calculated properly
+            if(!accBalance.multipliedBy(TEN.pow(12)).isEqualTo(expectedBalance)){
+                if(logConsole) console.log(`Line ${readableIndex}: Flare balance error`);
+                fs.appendFileSync(logFile, `Line ${readableIndex}: Flare balance error \n`);
+            }
+            // Calculate account balance 
             accBalance = accBalance.multipliedBy(contingentPercentage);
-            accBalance = accBalance.multipliedBy(conversionFactor);
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);
             // To get from XPR to 6 decimal places to Wei (Flare to 18 decimal places)
             accBalance = accBalance.multipliedBy(TEN.pow(12));
             // rounding down to 0 decimal places
             accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);
+            // Total Wei book keeping
             processedWei = processedWei.plus(accBalance);
             if(seenFlareAddresses.has(lineItem.FlareAddress)){
                 flrAddDetail[lineItem.FlareAddress].balance = flrAddDetail[lineItem.FlareAddress].balance.plus(accBalance);
@@ -118,7 +134,13 @@ conversionFactor: BigNumber, initialAirdropPercentage: BigNumber ):airdropGenesi
     }
     let accountsDistribution:number[] = [];
     for(let flrAdd of seenFlareAddresses){
-        processedAccounts.push(`"${flrAdd.substring(2)}": {"balance": "0x${flrAddDetail[flrAdd].balance.toString(16)}" },`);
+        processedAccounts.push(
+            {
+                FlareAddress: flrAdd,
+                FlareBalance: flrAddDetail[flrAdd].balance.toString(16)
+            }
+        )
+        // processedAccounts.push(`"${flrAdd.substring(2)}": {"balance": "0x${flrAddDetail[flrAdd].balance.toString(16)}" },`);
         if(accountsDistribution[flrAddDetail[flrAdd].num]){
             accountsDistribution[flrAddDetail[flrAdd].num] += 1;  
         } else {

@@ -112,7 +112,7 @@ Conversion Factor                           : ${conversionFactor.toFixed()}`
 fs.appendFileSync(logFileName, constantRepString + "\n");
 console.log(constantRepString);
 
-let columns:string[] | boolean = ['XRPAddress','FlareAddress','XRPBalance'];
+let columns:string[] | boolean = ['XRPAddress','FlareAddress','XRPBalance','FlareBalance'];
 if(header){
     columns = true
 }
@@ -134,8 +134,8 @@ console.log(`Number of valid accounts                    : ${validatedData.valid
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of invalid accounts                  : ${validatedData.invalidAccountsLen}\n`);
-console.log(`Total valid XPR balance read                : ${validatedData.totalXPRBalance.toFixed()}`)
-fs.appendFileSync(logFileName, `Total valid XPR balance read                : ${validatedData.totalXPRBalance.toFixed()} \n`);
+console.log(`Total valid XPR balance read (* 10^6)       : ${validatedData.totalXPRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total valid XPR balance read (* 10^6)       : ${validatedData.totalXPRBalance.toFixed()} \n`);
 console.log(`Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()}`)
 fs.appendFileSync(logFileName, `Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()} \n`);
 let expectedFlrToDistribute:BigNumber = new BigNumber(0);
@@ -152,7 +152,7 @@ console.log(separatorLine+"Input file processing")
 fs.appendFileSync(logFileName, separatorLine+"Input file processing\n");
 // Create Flare balance json
 let convertedAirdropData = createFlareAirdropGenesisData(parsed_file, validatedData,
-    contingentPercentage, conversionFactor, initialAirdropPercentage);
+    contingentPercentage, conversionFactor, initialAirdropPercentage, logFileName);
 // Log balance created
 const zeroPad = (num:any, places:any) => String(num).padStart(places, '0')
 console.log(`Number of processed accounts                : ${convertedAirdropData.processedAccountsLen}`)
@@ -180,7 +180,7 @@ console.log(`Read and processed account number match     : ${accounts_match}`)
 fs.appendFileSync(logFileName, `Read and processed account number match     : ${accounts_match} \n`);
 
 if(healthy){
-    const fileData = createGenesisFileData(convertedAirdropData.processedAccounts.join("\n              "))
+    const fileData = createGenesisFileData(convertedAirdropData.processedAccounts)
     fs.appendFileSync(genesisFile, fileData);
     console.log(`Created output genesis file at              : ${genesisFile}`)
     fs.appendFileSync(logFileName, `Created output genesis file at              : ${genesisFile} \n`); 
