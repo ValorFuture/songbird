@@ -72,11 +72,43 @@ describe('Processing testing', function() {
       assert.equal(processedFileData.invalidAccountsLen, 0);
     });
 
-    it('Should detect duplicated XPR address ', function() {
+    it('Should detect duplicated XRP address ', function() {
       let data = [
         {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x28BCD249FFD09D3FAF8D014683C5DB2A7CE36199",
         XRPBalance:"1295399054562900000000"},
         {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x22577CC04C6EA5F0E1CDE6BD2663761549995BA0",
+        XRPBalance:"20750371941600000000"},
+      ];
+      let processedFileData = processFile.validateFile(data,testLogFile, false);
+
+      assert.equal(processedFileData.validAccounts.length, 2);
+      assert.equal(processedFileData.validAccounts[0], true);
+      assert.equal(processedFileData.validAccounts[1], false);
+      assert.equal(processedFileData.validAccountsLen, 1);
+      assert.equal(processedFileData.invalidAccountsLen, 1);
+    });
+
+    it('Should detect invalid balance for XRP balance ', function() {
+      let data = [
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x28BCD249FFD09D3FAF8D014683C5DB2A7CE36199",
+        XRPBalance:"1295399054562900000000"},
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x22577CC04C6EA5F0E1CDE6BD2663761549995BA0",
+        XRPBalance:"20750371941600a000000"},
+      ];
+      let processedFileData = processFile.validateFile(data,testLogFile, false);
+
+      assert.equal(processedFileData.validAccounts.length, 2);
+      assert.equal(processedFileData.validAccounts[0], true);
+      assert.equal(processedFileData.validAccounts[1], false);
+      assert.equal(processedFileData.validAccountsLen, 1);
+      assert.equal(processedFileData.invalidAccountsLen, 1);
+    });
+
+    it('Should detect invalid Flare account', function() {
+      let data = [
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x28BCD249FFD09D3FAF8D014683C5DB2A7CE36199",
+        XRPBalance:"1295399054562900000000"},
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",FlareAddress:"0x22577CC04C7EA5F0E1CDE6BD2663761549995BA0",
         XRPBalance:"20750371941600000000"},
       ];
       let processedFileData = processFile.validateFile(data,testLogFile, false);
