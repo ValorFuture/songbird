@@ -15,36 +15,38 @@ Join the Flare community on [Discord](https://discord.gg/XqNa7Rq) for FAQ's and 
 
 ## Dependencies
 
-- Hardware per Flare node: 64-bit architecture, 2 GHz or faster CPU, 4 GB RAM, 20 GB hard disk.
-- OS: Ubuntu >= 18.04.
+- Hardware per Flare node: AMD64 processor, 2 GHz or faster CPU, 6 GB RAM, 200 GB hard disk.
+- OS: Ubuntu >= 20.04.
 - Flare validator software: [Go](https://golang.org/doc/install) version 1.15.5
     - Ensure that you set up [`$GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 - State-connector software: [NodeJS](https://nodejs.org/en/download/package-manager/) version 10.24.0.
 - NodeJS dependency management: [Yarn](https://classic.yarnpkg.com/en/docs/install) version 1.22.10.
-- cURL, gcc and jq: `sudo apt update && sudo apt -y install curl && sudo apt -y install gcc && sudo apt -y install jq`
+- gcc, g++, cURL and jq: `sudo apt update && sudo apt -y install gcc g++ curl jq`
 
 Clone Flare:
 ```
 git clone https://gitlab.com/flarenetwork/flare
 ```
 
+## Compile Flare
+
+Run the following command:
+
+```
+./compile.sh
+```
+
 ## Deploy a Local Network
 
-Configure and launch a 4-node network
-
-First, set an environment variable listing your preferred XRP Ledger APIs for use with the state connector system. Each successive URL included works as a backup to its preceeding URL in case the preceeding URL fails.
+Configure and launch a 5-node network:
 
 ```
-export XRP_APIs="https://xrpl.flare.network:443,https://xrpl-1.flare.network:443,https://xrplcluster.com"
-```
-
-Then, launch the network:
-
-```
-./local.sh
+./cmd/local.sh
 ```
 
 To restart a previously stopped network without resetting it, use the launch command above with the `--existing` flag.
+
+One can change the underlying-chain API endpoints they use for the state-connector system by editing the contents of the file at: `conf/local/chain_apis.json`. This file can differ across all validators on a Flare Network, because these values represent the private choices that a validator has made concerning which API endpoints they wish to rely on for safety in verifying proofs of the state of an underlying-chain.
 
 ## State-Connector System: Proving the state of any underlying chain for all smart contracts on Flare
 
@@ -69,7 +71,13 @@ In a new terminal window, the following command launches a web3 service that con
 ```
 cd client
 yarn
-./bridge.sh xrp
+./proveDataAvailability.sh xrp
+```
+
+Similarly, Litecoin block data availability can be proven using the command:
+
+```
+./proveDataAvailability.sh ltc
 ```
 
 ## Verify an Underlying Chain Payment on Flare
@@ -105,19 +113,13 @@ node prove xrp 8B3FB7F0B5BDAB705FDB152EBA20BF47159898D76812DA80BD367D99206B5C59
 
 Payment info: https://livenet.xrpl.org/transactions/8B3FB7F0B5BDAB705FDB152EBA20BF47159898D76812DA80BD367D99206B5C59
 
-## Connect a Node to the Coston Testnet
-
-To run your own Flare node and peer it with the Coston testnet launch the following commands after stopping all other instances of the Flare node on your machine:
+This example proves a BTC issued-currency payment on the XRPL:
 
 ```
-git checkout d00ed147e4bca7b2e3054d98c534f0a47bcd606f
-./coston.sh
+node prove xrp 67B3F2CAF2905BC67FEB5417C1C3F9AA941DF8984F1F49EC48D4DCADFAC94418
 ```
 
-Once launched, your Flare node may take several minutes to bootstrap to the Coston testnet history. Once bootstrapped, you can send Web3 RPC requests to the Coston testnet through your node's RPC endpoint at: `http://127.0.0.1:9650/ext/bc/C/rpc`.
-
-The Coston testnet also has a block scanner at https://explorer.flare.network and a CFLR faucet at https://faucet.towolabs.com/.
-
+Payment info: https://livenet.xrpl.org/transactions/67B3F2CAF2905BC67FEB5417C1C3F9AA941DF8984F1F49EC48D4DCADFAC94418
 
 ## License: MIT
 
