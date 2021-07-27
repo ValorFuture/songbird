@@ -5,9 +5,6 @@ package-lock.json
 artifacts/
 cache/
 typechain/
-<<<<<<< HEAD
 .DS_Store
-=======
 logs/
 db/
->>>>>>> master
