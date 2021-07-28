@@ -6,7 +6,7 @@ const LineItem = processFile.LineItem;
 
 // import {createFlareAirdropGenesisData, validateFile, LineItem} from "../scripts/utils/processFile";
 
-describe('Processing testing', function() {
+describe('Validate File testing', function() {
   const testLogPath = path.join(__dirname,  "temp")
   const testLogFile = testLogPath + "/test.txt"
 
