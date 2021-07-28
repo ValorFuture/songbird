@@ -6,3 +6,7 @@ export function writeError(err: any) {
         throw err;
     }
 }
+
+export function isBaseTenNumber(x:string):boolean {
+    return /^\d+$/.test(x)
+}

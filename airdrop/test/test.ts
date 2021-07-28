@@ -131,6 +131,26 @@ describe('Processing testing', function() {
       assert.equal(processedFileData.invalidAccountsLen, 1);
     });
 
+    it('Should detect invalid balance for FLR balance ', function() {
+      let data = [
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
+        FlareAddress:"0x28Bcd249FFd09d3fAf8d014683C5db2a7ce36199",
+        XRPBalance:"1286011173",
+        FlareBalance:"1295399054562900000000"},
+        {XRPAddress:"r11L3HhmYjTRVpueMwKZwPDeb6hBCSdBn",
+        FlareAddress:"0x22577cc04c6ea5f0E1cdE6Bd2663761549995BA0",
+        XRPBalance:"20599992",
+        FlareBalance:"20750371941a00000000"},
+      ];
+      let processedFileData = processFile.validateFile(data,testLogFile, false);
+
+      assert.equal(processedFileData.validAccounts.length, 2);
+      assert.equal(processedFileData.validAccounts.filter(function(x:any){return x===true}).length, 1);
+      assert.equal(processedFileData.validAccounts.filter(function(x:any){return x===false}).length, 1);
+      assert.equal(processedFileData.validAccountsLen, 1);
+      assert.equal(processedFileData.invalidAccountsLen, 1);
+    });
+
     it('Should detect invalid Flare account', function() {
       let data = [
         {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
@@ -139,6 +159,26 @@ describe('Processing testing', function() {
         FlareBalance:"1295399054562900000000"},
         {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
         FlareAddress:"0x22577cc04b6ea5f0E1cdE6Bd2663761549995BA0",
+        XRPBalance:"20599992",
+        FlareBalance:"20750371941600000000"},
+      ];
+      let processedFileData = processFile.validateFile(data,testLogFile, false);
+
+      assert.equal(processedFileData.validAccounts.length, 2);
+      assert.equal(processedFileData.validAccounts.filter(function(x:any){return x===true}).length, 1);
+      assert.equal(processedFileData.validAccounts.filter(function(x:any){return x===false}).length, 1);
+      assert.equal(processedFileData.validAccountsLen, 1);
+      assert.equal(processedFileData.invalidAccountsLen, 1);
+    });
+
+    it('Should detect invalid XPR account', function() {
+      let data = [
+        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ827c",
+        FlareAddress:"0x28Bcd249FFd09d3fAf8d014683C5db2a7ce36199",
+        XRPBalance:"1286011173",
+        FlareBalance:"1295399054562900000000"},
+        {XRPAddress:"r11L3HhmYjTRVpueMwKZwPDeb6hBCSdBn",
+        FlareAddress:"0x22577cc04c6ea5f0E1cdE6Bd2663761549995BA0",
         XRPBalance:"20599992",
         FlareBalance:"20750371941600000000"},
       ];

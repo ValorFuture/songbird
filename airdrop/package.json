@@ -12,7 +12,8 @@
     "airdrop_test": "yarn ts-node scripts/createAirdropGenesisDataFile.ts --snapshot-file files/example.csv --genesis-file files/go/genesis_scdev_light.go --override -h true",
     "airdrop": "yarn ts-node scripts/createAirdropGenesisDataFile.ts",
     "----------AIRDROP-TESTS------------": "",
-    "test": "mocha -r ts-node/register -r tsconfig-paths/register test/*.ts"
+    "test": "mocha -r ts-node/register -r tsconfig-paths/register test/*.ts",
+    "cov": "nyc --reporter=html --reporter=text --temp-dir=./coverage/.nyc_output mocha -r ts-node/register -r tsconfig-paths/register test/*.ts"
   },
   "dependencies": {
     "@types/mocha": "^9.0.0",
@@ -20,6 +21,7 @@
     "bignumber.js": "^9.0.1",
     "csv": "^5.5.0",
     "mocha": "^9.0.2",
+    "nyc": "^15.1.0",
     "ripple-lib": "^1.9.6",
     "ts-node": "^10.0.0",
     "tsconfig": "^7.0.0",

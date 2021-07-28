@@ -1,7 +1,7 @@
 const Web3Utils = require('web3-utils');
 const RippleAPI = require('ripple-lib').RippleAPI;
 import * as fs from 'fs';
-import { writeError } from './utils';
+import { isBaseTenNumber, writeError } from './utils';
 import BigNumber from "bignumber.js";
 import { removeUndefined } from 'ripple-lib/dist/npm/common';
 
@@ -75,15 +75,13 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
             fs.appendFileSync(logFile, `Line ${readableIndex}: Flare address is invalid ${lineItem.FlareAddress}\n`);
             isValid = false;
         }
-        let numberBalance = parseInt(lineItem.XRPBalance,10);
-        if(isNaN(numberBalance)){
+        if(!isBaseTenNumber(lineItem.XRPBalance)){
             if(logConsole) console.log(`Line ${readableIndex}: XRP Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XRP Balance is not a valid number \n`);
             isValid = false;
             isValidXRP = false;
         }
-        let FLRBalance = parseInt(lineItem.FlareBalance,10);
-        if(isNaN(FLRBalance)){
+        if(!isBaseTenNumber(lineItem.FlareBalance)){
             if(logConsole) console.log(`Line ${readableIndex}: FLR Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: FLR Balance is not a valid number \n`);
             isValid = false;
