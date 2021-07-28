@@ -117,7 +117,7 @@ describe('Processing testing', function() {
         FlareAddress:"0x28Bcd249FFd09d3fAf8d014683C5db2a7ce36199",
         XRPBalance:"1286011a173",
         FlareBalance:"1295399054562900000000"},
-        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
+        {XRPAddress:"r11L3HhmYjTRVpueMwKZwPDeb6hBCSdBn",
         FlareAddress:"0x22577cc04c6ea5f0E1cdE6Bd2663761549995BA0",
         XRPBalance:"20599992",
         FlareBalance:"20750371941600000000"},
