@@ -98,10 +98,12 @@ console.log(logFileName)
 fs.writeFileSync(logFileName, `Log file created at ${now.toISOString()} GMT(+0)\n`);
 
 const inputRepString = `Script run with 
---snapshot-file                             : ${snapshotFile}
---genesis-file                              : ${genesisFile}
---override                                  : ${override}
---log-path                                  : ${logPath}`
+--snapshot-file            (-f)             : ${snapshotFile}
+--genesis-file             (-g)             : ${genesisFile}
+--override                 (-o)             : ${override}
+--log-path                 (-l)             : ${logPath}
+--header                   (-h)             : ${header}
+--contingent-percentage    (-c)             : ${contingentPercentage.multipliedBy(100).toFixed()}`
 fs.appendFileSync(logFileName, inputRepString + "\n");
 console.log(inputRepString);
 
@@ -138,14 +140,19 @@ console.log(`Total valid XPR balance read (* 10^6)       : ${validatedData.total
 fs.appendFileSync(logFileName, `Total valid XPR balance read (* 10^6)       : ${validatedData.totalXPRBalance.toFixed()} \n`);
 console.log(`Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()}`)
 fs.appendFileSync(logFileName, `Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()} \n`);
+console.log(`Total valid FLR balance predicted (Towo)    : ${validatedData.totalFLRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total valid FLR balance predicted (Towo)    : ${validatedData.totalFLRBalance.toFixed()} \n`);
+console.log(`Total invalid FLR balance predicted (Towo)  : ${validatedData.invalidFLRBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total invalid FLR balance predicted (Towo)  : ${validatedData.invalidFLRBalance.toFixed()} \n`);
+
 let expectedFlrToDistribute:BigNumber = new BigNumber(0);
 expectedFlrToDistribute = validatedData.totalXPRBalance;
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor)
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(contingentPercentage)
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(initialAirdropPercentage);
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(TEN.pow(12));
-console.log(`Expected Flare to distribute (in Wei)       : ${expectedFlrToDistribute.toFixed()}`)
-fs.appendFileSync(logFileName, `Expected Flare to distribute (in Wei)       : ${expectedFlrToDistribute.toFixed()} \n`);
+console.log(`Expected Flare to distribute (Wei) (FLare)  : ${expectedFlrToDistribute.toFixed()}`)
+fs.appendFileSync(logFileName, `Expected Flare to distribute (Wei) (FLare)  : ${expectedFlrToDistribute.toFixed()} \n`);
 
 // Calculating conversion factor
 console.log(separatorLine+"Input file processing")
