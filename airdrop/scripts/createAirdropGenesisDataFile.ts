@@ -131,7 +131,11 @@ console.log(separatorLine+"Input file problems")
 fs.appendFileSync(logFileName, separatorLine+"Input file problems \n");
 // Validate Input CSV File
 let validatedData = validateFile(parsed_file,logFileName);
+console.log(`ERRORS                                      : ${validatedData.lineErrors}`)
+fs.appendFileSync(logFileName, `ERRORS                                      : ${validatedData.lineErrors}\n`);
 // Log Validation results
+console.log(separatorLine+"Input file validation output")
+fs.appendFileSync(logFileName, separatorLine+"Input file validation output \n");
 console.log(`Number of valid accounts                    : ${validatedData.validAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)

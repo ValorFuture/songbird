@@ -30,7 +30,8 @@ interface validateRes {
     totalXPRBalance: BigNumber,
     invalidXPRBalance: BigNumber,
     totalFLRBalance: BigNumber,
-    invalidFLRBalance: BigNumber
+    invalidFLRBalance: BigNumber,
+    lineErrors: number
 }
 interface airdropGenesisRes {
     processedAccounts: ProcessedAccount[],
@@ -43,6 +44,7 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
     let validAccountsLen:number = 0;
     let validAccounts:boolean[] = [];
     let invalidAccountsLen:number = 0;
+    let lineErrors = 0;
     let seenXPRAddresses = new Set();
     let totalXPRBalance = new BigNumber(0);
     let invalidXPRBalance = new BigNumber(0);
@@ -59,12 +61,14 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
             if(logConsole) console.log(`Line ${readableIndex}: XRP address is invalid ${lineItem.XRPAddress}`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XRP address is invalid ${lineItem.XRPAddress}\n`);
             isValid = false;
+            lineErrors += 1;
         }
         if(seenXPRAddresses.has(lineItem.XRPAddress)){
             // We have already seen this XPR address
             if(logConsole) console.log(`Line ${readableIndex}: XRP address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XRP address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}\n`);
             isValid = false;
+            lineErrors += 1;
         }
         if(!seenXPRAddresses.has(lineItem.XRPAddress)){
             seenXPRAddresses.add(lineItem.XRPAddress);
@@ -74,17 +78,20 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
             if(logConsole) console.log(`Line ${readableIndex}: Flare address is invalid ${lineItem.FlareAddress}`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: Flare address is invalid ${lineItem.FlareAddress}\n`);
             isValid = false;
+            lineErrors += 1;
         }
         if(!isBaseTenNumber(lineItem.XRPBalance)){
             if(logConsole) console.log(`Line ${readableIndex}: XRP Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: XRP Balance is not a valid number \n`);
             isValid = false;
+            lineErrors += 1;
             isValidXRP = false;
         }
         if(!isBaseTenNumber(lineItem.FlareBalance)){
             if(logConsole) console.log(`Line ${readableIndex}: FLR Balance is not a valid number`);
             fs.appendFileSync(logFile, `Line ${readableIndex}: FLR Balance is not a valid number \n`);
             isValid = false;
+            lineErrors += 1;
             isValidFLR = false;
         }
         validAccounts[lineIndex] = isValid;
@@ -109,7 +116,8 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
         totalXPRBalance,
         invalidXPRBalance,
         totalFLRBalance,
-        invalidFLRBalance
+        invalidFLRBalance,
+        lineErrors
     };
 }
 
