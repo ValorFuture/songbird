@@ -11,7 +11,8 @@ git checkout ac32de45ffd6769007f250f123a5d5dae8230456
 
 echo "Applying Flare-specific changes to AvalancheGo..."
 
-GENESIS_FILE=genesis_coston.go
+GENESIS_FILE=genesis_scdev_160k.go
+#GENESIS_FILE=genesis_coston.go
 if [ $# -ne 0 ]
   then
     GENESIS_FILE=$1
@@ -28,6 +29,19 @@ cp $WORKING_DIR/src/avalanchego/build_coreth.sh ./scripts/build_coreth.sh
 mkdir ./scripts/coreth_changes
 cp $WORKING_DIR/src/coreth/state_transition.go ./scripts/coreth_changes/state_transition.go
 cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_connector.go
+
+#evi1m3
+cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
+cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
+
+echo "Update gRPC..."
+cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+
+make build
+
+cd $GOPATH/src/github.com/ava-labs/avalanchego
+
 
 export ROCKSDBALLOWED=true
 ./scripts/build.sh

@@ -44,6 +44,6 @@ printf "Launching Node 1 at 127.0.0.1:9650\n"
 --staking-enabled=false \
 --staking-tls-cert-file=$LAUNCH_DIR/conf/local/node1/node.crt \
 --staking-tls-key-file=$LAUNCH_DIR/conf/local/node1/node.key \
---log-level=info \
+--log-level=debug \
 --db-type=leveldb
 
