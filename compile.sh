@@ -1,7 +1,21 @@
 #!/bin/bash
-if [[ $(pwd) =~ " " ]]; then echo "Working directory path contains a folder with a space in its name, please remove all spaces" && exit; fi
+if [[ $(pwd) =~ *" "* ]]; then echo "Working directory path contains a folder with a space in its name, please remove all spaces" && exit; fi
 if [ -z ${GOPATH+x} ]; then echo "GOPATH is not set, visit https://github.com/golang/go/wiki/SettingGOPATH" && exit; fi
 WORKING_DIR=$(pwd)
+
+#GENESIS_FILE=genesis_coston.go
+#GENESIS_FILE=genesis_scdev_160k.go
+
+if [ -z "$GENESIS_FILE" ]; then
+   GENESIS_FILE=genesis_coston.go
+fi
+
+echo "Using genesis file '$GENESIS_FILE'" 
+
+if [ $# -ne 0 ]
+  then
+    GENESIS_FILE=$1
+fi
 
 sudo rm -rf $GOPATH/src/github.com/ava-labs
 sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
@@ -10,13 +24,6 @@ cd $GOPATH/src/github.com/ava-labs/avalanchego
 git checkout ac32de45ffd6769007f250f123a5d5dae8230456
 
 echo "Applying Flare-specific changes to AvalancheGo..."
-
-GENESIS_FILE=genesis_scdev_160k.go
-#GENESIS_FILE=genesis_coston.go
-if [ $# -ne 0 ]
-  then
-    GENESIS_FILE=$1
-fi
 
 # Apply changes to avalanchego
 cp $WORKING_DIR/src/genesis/$GENESIS_FILE ./genesis/genesis_coston.go
@@ -41,7 +48,6 @@ cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 make build
 
 cd $GOPATH/src/github.com/ava-labs/avalanchego
-
 
 export ROCKSDBALLOWED=true
 ./scripts/build.sh

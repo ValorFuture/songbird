@@ -5,6 +5,11 @@ printf "\x1b[34mFlare Network 4-Node Local Deployment\x1b[0m\n\n"
 
 LAUNCH_DIR=$(pwd)
 
+# kill previous instances or it will not start
+ps -ef | grep evm | grep -v grep | awk '{print $2}' | xargs kill
+ps -ef | grep avalanchego-pro | grep -v grep | awk '{print $2}' | xargs kill
+ps -ef | grep avalanchego | grep -v grep | awk '{print $2}' | xargs kill
+
 # Test and export underlying chain APIs you chose to use for the state connector
 source ./cmd/export_chain_apis.sh $LAUNCH_DIR/conf/local/chain_apis.json
 
