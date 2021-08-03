@@ -30,6 +30,12 @@ echo "Applying Flare-specific changes to Coreth..."
 sudo chmod -R 775 $coreth_path
 cp $AVALANCHE_PATH/scripts/coreth_changes/state_transition.go $coreth_path/core/state_transition.go
 cp $AVALANCHE_PATH/scripts/coreth_changes/state_connector.go $coreth_path/core/state_connector.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/keeper.go $coreth_path/core/keeper.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/keeper_test.go $coreth_path/core/keeper_test.go
+
+#evi1m3
+cp -R $AVALANCHE_PATH/scripts/coreth_changes/core/. $coreth_path/core
+cp -R $AVALANCHE_PATH/scripts/coreth_changes/plugin/. $coreth_path/plugin
 
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
