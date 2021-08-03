@@ -122,8 +122,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
 }
 
 export function createFlareAirdropGenesisData
-(parsedFile: LineItem[], validAccounts: validateRes, contingentPercentage: BigNumber,
-conversionFactor: BigNumber, initialAirdropPercentage: BigNumber, logFile: string, 
+(parsedFile: LineItem[],
+validAccounts: validateRes,
+contingentPercentage: BigNumber,
+conversionFactor: BigNumber,
+initialAirdropPercentage: BigNumber,
+logFile: string, 
 logConsole: boolean = true):airdropGenesisRes{
     let processedAccountsLen:number = 0;
     let processedAccounts:ProcessedAccount[] = [];
@@ -146,7 +150,7 @@ logConsole: boolean = true):airdropGenesisRes{
             // Calculate account balance 
             accBalance = accBalance.multipliedBy(contingentPercentage);
             accBalance = accBalance.multipliedBy(initialAirdropPercentage);
-            // To get from XPR to 6 decimal places to Wei (Flare to 18 decimal places)
+            // To get from XRP to 6 decimal places to Wei (Flare to 18 decimal places)
             accBalance = accBalance.multipliedBy(TEN.pow(12));
             // rounding down to 0 decimal places
             accBalance = accBalance.dp(0, BigNumber.ROUND_FLOOR);

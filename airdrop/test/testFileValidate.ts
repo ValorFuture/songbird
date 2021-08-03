@@ -1,10 +1,10 @@
+import BigNumber from "bignumber.js";
+
 var assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 var processFile = require('../scripts/utils/processFile');
 const LineItem = processFile.LineItem;
-
-// import {createFlareAirdropGenesisData, validateFile, LineItem} from "../scripts/utils/processFile";
 
 describe('Validate File testing', function() {
   const testLogPath = path.join(__dirname,  "temp")
@@ -38,51 +38,52 @@ describe('Validate File testing', function() {
     fs.unlinkSync(testLogFile);
   });
 
+  const validData10 = [
+    {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
+    FlareAddress:"0x28Bcd249FFd09d3fAf8d014683C5db2a7ce36199",
+    XRPBalance:"1286011173",
+    FlareBalance:"1295399054562900000000"},
+    {XRPAddress:"r11L3HhmYjTRVpueMwKZwPDeb6hBCSdBn",
+    FlareAddress:"0x22577cc04c6ea5f0E1cdE6Bd2663761549995BA0",
+    XRPBalance:"20599992",
+    FlareBalance:"20750371941600000000"},
+    {XRPAddress:"r12zYzJzTcf2j1BPsb5kUtZnLA1Wn7445",
+    FlareAddress:"0x2a6687E2FDd6A66ac868Ac62ad12c01245e72CbB",
+    XRPBalance:"555303008",
+    FlareBalance:"559356719958400000000"},
+    {XRPAddress:"r1398Fmwd1oYz8uUUbeQUE5axgXHjcfTZ",
+    FlareAddress:"0x38eA655165Cc077a36E1f1Ed745c003DFE83875d",
+    XRPBalance:"603499924",
+    FlareBalance:"607905473445200000000"},
+    {XRPAddress:"r13m9n9y7TVwFLfJnsMh1tGPRsXjMiaKh",
+    FlareAddress:"0x8BA3b8041146Fb6769d76A900826bE705b1D669E",
+    XRPBalance:"37999976",
+    FlareBalance:"38277375824800000000"},
+    {XRPAddress:"r14f8Luu4dYKzNEwFYV2KfA74YZcWVS5F",
+    FlareAddress:"0x158E1998458203B4824241b9Bc178EA55c532a30",
+    XRPBalance:"1399999700",
+    FlareBalance:"1410219697810000000000"},
+    {XRPAddress:"r14iqdWmMQD1M7ski2a1oL2yoL8saBrgS",
+    FlareAddress:"0xd4D3e94c6A2059C3166D4Bd5a4421Af101394C7C",
+    XRPBalance:"1026587825",
+    FlareBalance:"1034081916122500000000"},
+    {XRPAddress:"r15BXLNhkFuUP2jztomyDvzsxVLzYw7Yh",
+    FlareAddress:"0x61BA6F4C8165E031da5443ACFcA9e804Fbe993C4",
+    XRPBalance:"46702988",
+    FlareBalance:"47043919812400000000"},
+    {XRPAddress:"r15aAVY2acncVcTkShfQQ6ycAQS2b4yfa",
+    FlareAddress:"0xd4E690b5DD199b64Dea5B8fc08fc79A7f2cF7E76",
+    XRPBalance:"19999988",
+    FlareBalance:"20145987912400000000"},
+    {XRPAddress:"r16DDq7D5kbh7mY6oUWk73RMd2pHA9CKv",
+    FlareAddress:"0x6cDE1C841812C3820C8A61B9be548f105dc15DDF",
+    XRPBalance:"14031299960",
+    FlareBalance:"14133728449708000000000"}
+  ];
+
   describe('Validating lines', function() {
     it('Should work just fine', function() {
-      let data = [
-        {XRPAddress:"r11D6PPwznQcvNGCPbt7M27vguskJ826c",
-        FlareAddress:"0x28Bcd249FFd09d3fAf8d014683C5db2a7ce36199",
-        XRPBalance:"1286011173",
-        FlareBalance:"1295399054562900000000"},
-        {XRPAddress:"r11L3HhmYjTRVpueMwKZwPDeb6hBCSdBn",
-        FlareAddress:"0x22577cc04c6ea5f0E1cdE6Bd2663761549995BA0",
-        XRPBalance:"20599992",
-        FlareBalance:"20750371941600000000"},
-        {XRPAddress:"r12zYzJzTcf2j1BPsb5kUtZnLA1Wn7445",
-        FlareAddress:"0x2a6687E2FDd6A66ac868Ac62ad12c01245e72CbB",
-        XRPBalance:"555303008",
-        FlareBalance:"559356719958400000000"},
-        {XRPAddress:"r1398Fmwd1oYz8uUUbeQUE5axgXHjcfTZ",
-        FlareAddress:"0x38eA655165Cc077a36E1f1Ed745c003DFE83875d",
-        XRPBalance:"603499924",
-        FlareBalance:"607905473445200000000"},
-        {XRPAddress:"r13m9n9y7TVwFLfJnsMh1tGPRsXjMiaKh",
-        FlareAddress:"0x8BA3b8041146Fb6769d76A900826bE705b1D669E",
-        XRPBalance:"37999976",
-        FlareBalance:"38277375824800000000"},
-        {XRPAddress:"r14f8Luu4dYKzNEwFYV2KfA74YZcWVS5F",
-        FlareAddress:"0x158E1998458203B4824241b9Bc178EA55c532a30",
-        XRPBalance:"1399999700",
-        FlareBalance:"1410219697810000000000"},
-        {XRPAddress:"r14iqdWmMQD1M7ski2a1oL2yoL8saBrgS",
-        FlareAddress:"0xd4D3e94c6A2059C3166D4Bd5a4421Af101394C7C",
-        XRPBalance:"1026587825",
-        FlareBalance:"1034081916122500000000"},
-        {XRPAddress:"r15BXLNhkFuUP2jztomyDvzsxVLzYw7Yh",
-        FlareAddress:"0x61BA6F4C8165E031da5443ACFcA9e804Fbe993C4",
-        XRPBalance:"46702988",
-        FlareBalance:"47043919812400000000"},
-        {XRPAddress:"r15aAVY2acncVcTkShfQQ6ycAQS2b4yfa",
-        FlareAddress:"0xd4E690b5DD199b64Dea5B8fc08fc79A7f2cF7E76",
-        XRPBalance:"19999988",
-        FlareBalance:"20145987912400000000"},
-        {XRPAddress:"r16DDq7D5kbh7mY6oUWk73RMd2pHA9CKv",
-        FlareAddress:"0x6cDE1C841812C3820C8A61B9be548f105dc15DDF",
-        XRPBalance:"14031299960",
-        FlareBalance:"14133728449708000000000"}
-      ];
-      let processedFileData = processFile.validateFile(data,testLogFile, false);
+      let processedFileData = processFile.validateFile(validData10,testLogFile, false);
 
       assert.equal(processedFileData.validAccounts.length, 10);
       assert.equal(processedFileData.validAccounts.filter(function(x:any){return x===true}).length, 10);
@@ -191,4 +192,27 @@ describe('Validate File testing', function() {
       assert.equal(processedFileData.invalidAccountsLen, 1);
     });
   });
+
+  describe('Processing Data', function() {
+    it.only('Should work just fine', function() {
+      const contPer = new BigNumber(1);
+      const conFact = new BigNumber(1.0073);
+      const initAir = new BigNumber(1);
+      const validatedFile = processFile.validateFile(validData10, testLogFile,false)
+      const parsedFile = processFile.createFlareAirdropGenesisData(
+        validData10,
+        validatedFile,
+        contPer,
+        conFact,
+        initAir,
+        testLogFile,
+        false);
+
+      assert.equal(parsedFile.accountsDistribution.length,2);
+      assert.equal(parsedFile.accountsDistribution[1],10);
+      assert.equal(parsedFile.processedAccounts.length,10);
+      assert.equal(parsedFile.processedAccountsLen,10);
+    });
+  });
+
 });
