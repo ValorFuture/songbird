@@ -2,7 +2,11 @@
 if [[ $(pwd) =~ *" "* ]]; then echo "Working directory path contains a folder with a space in its name, please remove all spaces" && exit; fi
 if [ -z ${GOPATH+x} ]; then echo "GOPATH is not set, visit https://github.com/golang/go/wiki/SettingGOPATH" && exit; fi
 if [[ $(go version) != *"go1.15"* ]]; then echo "Go version is not go1.15" && exit; fi
+<<<<<<< HEAD
 if [ "$(dpkg --print-architecture)" != "amd64" ]; then echo "Machine architecture is not amd64 or you are missing dpkg" && exit; fi
+=======
+if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64" && exit; fi
+>>>>>>> master
 
 WORKING_DIR=$(pwd)
 
@@ -24,8 +28,9 @@ sudo rm -rf $GOPATH/src/github.com/ava-labs
 sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
 go get -v -d github.com/ava-labs/avalanchego/...
 cd $GOPATH/src/github.com/ava-labs/avalanchego
-# Hard-coded commit to tag v1.4.11-rc.0, at the time of this authoring
-git checkout ac32de45ffd6769007f250f123a5d5dae8230456
+# Hard-coded commit to tag v1.4.12, at the time of this authoring
+# https://github.com/ava-labs/avalanchego/releases/tag/v1.4.12
+git checkout cae93d95c1bcdc02e1370d38ed1c9d87f1c8c814
 
 echo "Applying Flare-specific changes to AvalancheGo..."
 
@@ -43,18 +48,6 @@ cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_co
 cp $WORKING_DIR/src/keeper/keeper.go ./scripts/coreth_changes/keeper.go
 cp $WORKING_DIR/src/keeper/keeper_test.go ./scripts/coreth_changes/keeper_test.go
 
-#evi1m3
-cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
-cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
-
-echo "Update gRPC..."
-cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-
-make build
-
-cd $GOPATH/src/github.com/ava-labs/avalanchego
-
-export ROCKSDBALLOWED=true
+export ROCKSDBALLOWED=1
 ./scripts/build.sh
 rm -rf ./scripts/coreth_changes

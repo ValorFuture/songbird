@@ -8,3 +8,6 @@ typechain/
 .DS_Store
 logs/
 db/
+bin/src/stateco/*-solc-output.json
+bin/src/stateco/*.abi
+bin/src/stateco/*.bin
