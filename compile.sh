@@ -44,6 +44,18 @@ cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_co
 cp $WORKING_DIR/src/keeper/keeper.go ./scripts/coreth_changes/keeper.go
 cp $WORKING_DIR/src/keeper/keeper_test.go ./scripts/coreth_changes/keeper_test.go
 
-export ROCKSDBALLOWED=1
+#evi1m3
+cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
+cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
+
+echo "Update gRPC..."
+sudo cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+
+make build
+
+cd $GOPATH/src/github.com/ava-labs/avalanchego
+
+export ROCKSDBALLOWED=true
 ./scripts/build.sh
 rm -rf ./scripts/coreth_changes
