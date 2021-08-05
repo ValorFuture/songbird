@@ -28,18 +28,15 @@ fi
 
 echo "Applying Flare-specific changes to Coreth..."
 sudo chmod -R 775 $coreth_path
-cp $AVALANCHE_PATH/scripts/coreth_changes/state_transition.go $coreth_path/core/state_transition.go
-cp $AVALANCHE_PATH/scripts/coreth_changes/state_connector.go $coreth_path/core/state_connector.go
-cp $AVALANCHE_PATH/scripts/coreth_changes/keeper.go $coreth_path/core/keeper.go
-cp $AVALANCHE_PATH/scripts/coreth_changes/keeper_test.go $coreth_path/core/keeper_test.go
 
 #evi1m3
-cp -R $AVALANCHE_PATH/scripts/coreth_changes/core/. $coreth_path/core
-cp -R $AVALANCHE_PATH/scripts/coreth_changes/plugin/. $coreth_path/plugin
+cp -R $AVALANCHE_PATH/scripts/coreth_changes/coreth/. $coreth_path
 
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
 cd "$coreth_path"
+go mod edit -replace=google.golang.org/grpc@v1.37.0=$AVALANCHE_PATH/scripts/grpc_changes/grpc
+go mod tidy
 go build -ldflags "-X github.com/ava-labs/coreth/plugin/evm.Version=$coreth_version" -o "$latest_evm_path" "plugin/"*.go
 cd "$AVALANCHE_PATH"
 

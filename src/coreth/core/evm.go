@@ -34,9 +34,7 @@ import (
 	"github.com/ava-labs/coreth/core/vm"
 	"github.com/ethereum/go-ethereum/common"
 	//"github.com/ethereum/go-ethereum/log"
-	
 	"google.golang.org/grpc"
-	
 )
 
 // evi1m3: add global variable so that we can access it later (maybe not the best place ;)

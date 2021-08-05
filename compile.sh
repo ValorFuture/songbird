@@ -5,6 +5,7 @@ if [[ $(go version) != *"go1.15"* ]]; then echo "Go version is not go1.15" && ex
 if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64" && exit; fi
 
 WORKING_DIR=$(pwd)
+GRPC_SRC_PATH=$GOPATH/src/google.golang.org/grpc
 
 #GENESIS_FILE=genesis_coston.go
 #GENESIS_FILE=genesis_scdev_160k.go
@@ -20,10 +21,16 @@ if [ $# -ne 0 ]
     GENESIS_FILE=$1
 fi
 
+# Start fresh
 sudo rm -rf $GOPATH/src/github.com/ava-labs
 sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
+sudo rm -rf $WORKING_DIR/tmp
+
+# Get Avalanchego source
 go get -v -d github.com/ava-labs/avalanchego/...
 cd $GOPATH/src/github.com/ava-labs/avalanchego
+
+# Switch to supported version
 # Hard-coded commit to tag v1.4.12, at the time of this authoring
 # https://github.com/ava-labs/avalanchego/releases/tag/v1.4.12
 git checkout cae93d95c1bcdc02e1370d38ed1c9d87f1c8c814
@@ -38,12 +45,37 @@ cp $WORKING_DIR/src/avalanchego/genesis_fuji.go ./genesis/genesis_fuji.go
 cp $WORKING_DIR/src/avalanchego/unparsed_config.go ./genesis/unparsed_config.go
 cp $WORKING_DIR/src/avalanchego/set.go ./snow/validators/set.go
 cp $WORKING_DIR/src/avalanchego/build_coreth.sh ./scripts/build_coreth.sh
+
+# Apply changes to coreth
+echo "Applying Flare-specific changes to coreth..."
 mkdir ./scripts/coreth_changes
-cp $WORKING_DIR/src/coreth/state_transition.go ./scripts/coreth_changes/state_transition.go
-cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_connector.go
-cp $WORKING_DIR/src/keeper/keeper.go ./scripts/coreth_changes/keeper.go
-cp $WORKING_DIR/src/keeper/keeper_test.go ./scripts/coreth_changes/keeper_test.go
+cp -R $WORKING_DIR/src/coreth/. ./scripts/coreth_changes/coreth
+
+echo "Applying Flare-specific changes to grpc..."
+
+# Grab grpc from repo
+mkdir $WORKING_DIR/tmp
+cd $WORKING_DIR/tmp
+git clone https://github.com/grpc/grpc-go
+cd grpc-go
+# Switch to version required by Avalanche
+git checkout v1.37.0
+
+# Apply changes to grpc
+cp $WORKING_DIR/src/grpc@v1.37.0/server.go .
+
+# Go to Avalanche source directory to begin build
+cd $GOPATH/src/github.com/ava-labs/avalanchego
+
+# Copy grpc changes to location where ava coreth build script knows where to fetch
+mkdir ./scripts/grpc_changes
+cp -R $WORKING_DIR/tmp/grpc-go/. ./scripts/grpc_changes/grpc
+
+# Modify grpc dependency to point to the vendored version for AvalancheGo
+go mod edit -replace=google.golang.org/grpc@v1.37.0=$WORKING_DIR/tmp/grpc-go
+go mod tidy
 
 export ROCKSDBALLOWED=1
 ./scripts/build.sh
 rm -rf ./scripts/coreth_changes
+rm -rf ./scripts/grpc_changes
