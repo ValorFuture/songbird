@@ -91,8 +91,8 @@ const (
 	missingCacheSize    = 50
 	unverifiedCacheSize = 50
 
-	// evi1m3: max receive message size
-	maxReceiveMessageSize = 1024 * 128
+	// evi1m3: default max receive message size
+	maxReceiveMessageSize = 1024 * 1024 * 4
 )
 
 var (
@@ -449,6 +449,7 @@ func (vm *VM) Initialize(
 	// evi1m3
 	// reduce initial server receive size
 	core.GlobalServer.SetMaxReceiveMessageSize(maxReceiveMessageSize)
+	core.GlobalServer = nil
 
 	return vm.fx.Initialize(vm)
 }
