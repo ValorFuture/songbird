@@ -7,19 +7,16 @@ if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64"
 WORKING_DIR=$(pwd)
 GRPC_SRC_PATH=$GOPATH/src/google.golang.org/grpc
 
-#GENESIS_FILE=genesis_coston.go
-#GENESIS_FILE=genesis_scdev_160k.go
-
 if [ -z "$GENESIS_FILE" ]; then
-   GENESIS_FILE=genesis_scdev_airdrop.go
+   GENESIS_FILE=genesis_coston.go
 fi
-
-echo "Using genesis file '$GENESIS_FILE'" 
 
 if [ $# -ne 0 ]
   then
     GENESIS_FILE=$1
 fi
+
+echo "Using genesis file '$GENESIS_FILE'" 
 
 # Start fresh
 sudo rm -rf $GOPATH/src/github.com/ava-labs
@@ -47,7 +44,7 @@ cp $WORKING_DIR/src/avalanchego/set.go ./snow/validators/set.go
 cp $WORKING_DIR/src/avalanchego/build_coreth.sh ./scripts/build_coreth.sh
 
 # Apply changes to coreth
-echo "Applying Flare-specific changes to coreth..."
+echo "Copying Flare-specific changes for coreth building..."
 mkdir ./scripts/coreth_changes
 cp -R $WORKING_DIR/src/coreth/. ./scripts/coreth_changes/coreth
 
@@ -74,16 +71,6 @@ cp -R $WORKING_DIR/tmp/grpc-go/. ./scripts/grpc_changes/grpc
 # Modify grpc dependency to point to the vendored version for AvalancheGo
 go mod edit -replace=google.golang.org/grpc@v1.37.0=$WORKING_DIR/tmp/grpc-go
 go mod tidy
-
-#evi1m3
-cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
-cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
-
-echo "Update gRPC..."
-sudo cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-
-make build
 
 cd $GOPATH/src/github.com/ava-labs/avalanchego
 
