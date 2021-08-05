@@ -48,7 +48,7 @@ cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
 cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
 
 echo "Update gRPC..."
-cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+sudo cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 
 make build
