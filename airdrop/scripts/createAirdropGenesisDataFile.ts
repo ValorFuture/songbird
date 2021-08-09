@@ -1,4 +1,3 @@
-import { BADNAME } from 'dns';
 import * as fs from 'fs';
 import {createFlareAirdropGenesisData, validateFile} from "./utils/processFile";
 import { writeError } from './utils/utils';
@@ -140,17 +139,17 @@ console.log(`Number of valid accounts                    : ${validatedData.valid
 fs.appendFileSync(logFileName, `Number of valid accounts                    : ${validatedData.validAccountsLen}\n`);
 console.log(`Number of invalid accounts                  : ${validatedData.invalidAccountsLen}`)
 fs.appendFileSync(logFileName, `Number of invalid accounts                  : ${validatedData.invalidAccountsLen}\n`);
-console.log(`Total valid XPR balance read (* 10^6)       : ${validatedData.totalXPRBalance.toFixed()}`)
-fs.appendFileSync(logFileName, `Total valid XPR balance read (* 10^6)       : ${validatedData.totalXPRBalance.toFixed()} \n`);
-console.log(`Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()}`)
-fs.appendFileSync(logFileName, `Total invalid XPR balance read              : ${validatedData.invalidXPRBalance.toFixed()} \n`);
+console.log(`Total valid XRP balance read (* 10^6)       : ${validatedData.totalXRPBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total valid XRP balance read (* 10^6)       : ${validatedData.totalXRPBalance.toFixed()} \n`);
+console.log(`Total invalid XRP balance read              : ${validatedData.invalidXRPBalance.toFixed()}`)
+fs.appendFileSync(logFileName, `Total invalid XRP balance read              : ${validatedData.invalidXRPBalance.toFixed()} \n`);
 console.log(`Total valid FLR balance predicted (Towo)    : ${validatedData.totalFLRBalance.toFixed()}`)
 fs.appendFileSync(logFileName, `Total valid FLR balance predicted (Towo)    : ${validatedData.totalFLRBalance.toFixed()} \n`);
 console.log(`Total invalid FLR balance predicted (Towo)  : ${validatedData.invalidFLRBalance.toFixed()}`)
 fs.appendFileSync(logFileName, `Total invalid FLR balance predicted (Towo)  : ${validatedData.invalidFLRBalance.toFixed()} \n`);
 
 let expectedFlrToDistribute:BigNumber = new BigNumber(0);
-expectedFlrToDistribute = validatedData.totalXPRBalance;
+expectedFlrToDistribute = validatedData.totalXRPBalance;
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(conversionFactor)
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(contingentPercentage)
 expectedFlrToDistribute = expectedFlrToDistribute.multipliedBy(initialAirdropPercentage);

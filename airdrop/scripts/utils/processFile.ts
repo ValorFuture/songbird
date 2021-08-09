@@ -27,8 +27,8 @@ interface validateRes {
     validAccounts: boolean[],
     validAccountsLen: number,
     invalidAccountsLen: number,
-    totalXPRBalance: BigNumber,
-    invalidXPRBalance: BigNumber,
+    totalXRPBalance: BigNumber,
+    invalidXRPBalance: BigNumber,
     totalFLRBalance: BigNumber,
     invalidFLRBalance: BigNumber,
     lineErrors: number
@@ -45,12 +45,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
     let validAccounts:boolean[] = [];
     let invalidAccountsLen:number = 0;
     let lineErrors = 0;
-    let seenXPRAddresses = new Set();
-    let totalXPRBalance = new BigNumber(0);
-    let invalidXPRBalance = new BigNumber(0);
+    let seenXRPAddresses = new Set();
+    let totalXRPBalance = new BigNumber(0);
+    let invalidXRPBalance = new BigNumber(0);
     let totalFLRBalance = new BigNumber(0);
     let invalidFLRBalance = new BigNumber(0);
-    let seenXPRAddressesDetail: {[name: string]: number } = {};
+    let seenXRPAddressesDetail: {[name: string]: number } = {};
     for(let lineIndex = 0; lineIndex < parsedFile.length; lineIndex++){
         let lineItem = parsedFile[lineIndex];
         let isValid = true;
@@ -63,16 +63,16 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
             isValid = false;
             lineErrors += 1;
         }
-        if(seenXPRAddresses.has(lineItem.XRPAddress)){
-            // We have already seen this XPR address
-            if(logConsole) console.log(`Line ${readableIndex}: XRP address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}`);
-            fs.appendFileSync(logFile, `Line ${readableIndex}: XRP address is duplicate of line ${seenXPRAddressesDetail[lineItem.XRPAddress]}\n`);
+        if(seenXRPAddresses.has(lineItem.XRPAddress)){
+            // We have already seen this XRP address
+            if(logConsole) console.log(`Line ${readableIndex}: XRP address is duplicate of line ${seenXRPAddressesDetail[lineItem.XRPAddress]}`);
+            fs.appendFileSync(logFile, `Line ${readableIndex}: XRP address is duplicate of line ${seenXRPAddressesDetail[lineItem.XRPAddress]}\n`);
             isValid = false;
             lineErrors += 1;
         }
-        if(!seenXPRAddresses.has(lineItem.XRPAddress)){
-            seenXPRAddresses.add(lineItem.XRPAddress);
-            seenXPRAddressesDetail[lineItem.XRPAddress] = lineIndex;
+        if(!seenXRPAddresses.has(lineItem.XRPAddress)){
+            seenXRPAddresses.add(lineItem.XRPAddress);
+            seenXRPAddressesDetail[lineItem.XRPAddress] = lineIndex;
         } 
         if(!Web3Utils.isAddress(lineItem.FlareAddress)){
             if(logConsole) console.log(`Line ${readableIndex}: Flare address is invalid ${lineItem.FlareAddress}`);
@@ -97,12 +97,12 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
         validAccounts[lineIndex] = isValid;
         if(isValid){
             validAccountsLen += 1;
-            totalXPRBalance = totalXPRBalance.plus(lineItem.XRPBalance);
+            totalXRPBalance = totalXRPBalance.plus(lineItem.XRPBalance);
             totalFLRBalance = totalFLRBalance.plus(lineItem.FlareBalance);
         } else {
             invalidAccountsLen += 1;
             if (isValidXRP) {
-                invalidXPRBalance = invalidXPRBalance.plus(lineItem.XRPBalance);
+                invalidXRPBalance = invalidXRPBalance.plus(lineItem.XRPBalance);
             }
             if (isValidFLR) {
                 invalidFLRBalance = invalidFLRBalance.plus(lineItem.FlareBalance);
@@ -113,8 +113,8 @@ export function validateFile(parsedFile: LineItem[], logFile: string, logConsole
         validAccounts,
         validAccountsLen,
         invalidAccountsLen,
-        totalXPRBalance,
-        invalidXPRBalance,
+        totalXRPBalance,
+        invalidXRPBalance,
         totalFLRBalance,
         invalidFLRBalance,
         lineErrors
