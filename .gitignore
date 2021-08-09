@@ -7,3 +7,5 @@ cache/
 typechain/
 logs/
 db/
+utils/airdrop/genesis.random.go
+utils/airdrop/create-genesis.js
