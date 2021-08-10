@@ -11,10 +11,6 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-const (
-	port = ":50052"
-)
-
 // server is used to implement helloworld.GreeterServer.
 type server struct {
 	pb.UnimplementedGreeterServer
