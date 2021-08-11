@@ -301,13 +301,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		selectClaimPeriodFinality     bool
 		selectProvePaymentFinality    bool
 		selectDisprovePaymentFinality bool
+		prioritisedFTSOContract       bool
 	)
 
-	if !contractCreation && *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
-		selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
-		selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
-		selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
+	if !contractCreation {
+		if *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.BlockNumber)) {
+			selectClaimPeriodFinality = bytes.Equal(st.data[0:4], GetProveClaimPeriodFinalitySelector(st.evm.Context.BlockNumber))
+			selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.BlockNumber))
+			selectDisprovePaymentFinality = bytes.Equal(st.data[0:4], GetDisprovePaymentFinalitySelector(st.evm.Context.BlockNumber))
+		} else {
+			prioritisedFTSOContract = *msg.To() == common.HexToAddress(GetPrioritisedFTSOContract(st.evm.Context.BlockNumber))
+		}
 	}
+	burnAddress := st.evm.Context.Coinbase
 
 	if selectClaimPeriodFinality || selectProvePaymentFinality || selectDisprovePaymentFinality {
 		// Increment the nonce for the next transaction
@@ -333,7 +339,18 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 	}
 	st.refundGas(apricotPhase1)
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	if vmerr == nil && prioritisedFTSOContract {
+		priorityNumerator := GetFTSOPriorityNumerator(st.evm.Context.BlockNumber)
+		priorityDenominator := GetFTSOPriorityDenominator(st.evm.Context.BlockNumber)
+		if st.gasUsed() > priorityDenominator && priorityNumerator < priorityDenominator {
+			st.state.AddBalance(burnAddress, new(big.Int).Mul(new(big.Int).SetUint64(priorityNumerator*(st.gasUsed()/priorityDenominator)), st.gasPrice))
+			st.state.AddBalance(st.msg.From(), new(big.Int).Mul(new(big.Int).SetUint64((priorityDenominator-priorityNumerator)*(st.gasUsed()/priorityDenominator)), st.gasPrice))
+		} else {
+			st.state.AddBalance(burnAddress, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+		}
+	} else {
+		st.state.AddBalance(burnAddress, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	}
 
 	// Call the keeper contract trigger method if there is no vm error
 	log := log.Root()

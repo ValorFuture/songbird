@@ -61,6 +61,28 @@ func GetSystemTriggerSelector(blockNumber *big.Int) []byte {
 	}
 }
 
+func GetPrioritisedFTSOContract(blockNumber *big.Int) string {
+	switch {
+	default:
+		return "0x1000000000000000000000000000000000000003"
+	}
+}
+
+// Only 0.001% of the gas used is actually charged to the sender of a successfully prioritised transaction under the following params: (1/100000)
+func GetFTSOPriorityNumerator(blockNumber *big.Int) uint64 {
+	switch {
+	default:
+		return 1
+	}
+}
+
+func GetFTSOPriorityDenominator(blockNumber *big.Int) uint64 {
+	switch {
+	default:
+		return 100000
+	}
+}
+
 func GetMaximumMintRequest(blockNumber *big.Int) *big.Int {
 	switch {
 	default:
