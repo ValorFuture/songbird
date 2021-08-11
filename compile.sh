@@ -30,27 +30,28 @@ git checkout ac32de45ffd6769007f250f123a5d5dae8230456
 echo "Applying Flare-specific changes to AvalancheGo..."
 
 # Apply changes to avalanchego
+
+# copy active genesis file
 cp $WORKING_DIR/src/genesis/$GENESIS_FILE ./genesis/genesis_coston.go
-cp $WORKING_DIR/src/avalanchego/flags.go ./config/flags.go
-cp $WORKING_DIR/src/avalanchego/beacons.go ./genesis/beacons.go
-cp $WORKING_DIR/src/avalanchego/genesis_fuji.go ./genesis/genesis_fuji.go
-cp $WORKING_DIR/src/avalanchego/unparsed_config.go ./genesis/unparsed_config.go
-cp $WORKING_DIR/src/avalanchego/set.go ./snow/validators/set.go
-cp $WORKING_DIR/src/avalanchego/build_coreth.sh ./scripts/build_coreth.sh
+
+# copy flare avalanchego changes
+cp -R $WORKING_DIR/src/avalanchego/. .
+
+# copy flare coreth changes
 mkdir ./scripts/coreth_changes
-cp $WORKING_DIR/src/coreth/state_transition.go ./scripts/coreth_changes/state_transition.go
-cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_connector.go
-cp $WORKING_DIR/src/keeper/keeper.go ./scripts/coreth_changes/keeper.go
-cp $WORKING_DIR/src/keeper/keeper_test.go ./scripts/coreth_changes/keeper_test.go
+cp -R $WORKING_DIR/src/coreth/. ./scripts/coreth_changes
 
-#evi1m3
-cp -R $WORKING_DIR/src/coreth/plugin/. ./scripts/coreth_changes/plugin
-cp -R $WORKING_DIR/src/coreth/core/. ./scripts/coreth_changes/core
-
+# copy flare gRPC changes
 echo "Update gRPC..."
+
+export GO111MODULE=on
+go get google.golang.org/grpc@v1.37.0
+export GO111MODULE=
+
 cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 
+# build
 make build
 
 cd $GOPATH/src/github.com/ava-labs/avalanchego
