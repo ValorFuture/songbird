@@ -8,7 +8,7 @@ WORKING_DIR=$(pwd)
 GRPC_SRC_PATH=$GOPATH/src/google.golang.org/grpc
 
 if [ -z "$GENESIS_FILE" ]; then
-   GENESIS_FILE=genesis_coston.go
+   GENESIS_FILE=genesis_scdev_airdrop.go
 fi
 
 if [ $# -ne 0 ]

@@ -20,5 +20,5 @@ build-flare-network:
     script:
         - export GOPATH=$HOME/go
         - cp compile.sh /compile.sh
-        - ./compile.sh genesis_scdev_airdrop.go
+        - ./compile.sh
         - .cmd/single
