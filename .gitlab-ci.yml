@@ -23,6 +23,7 @@ variables:
 test-airdrop:
     stage: airdrop_test
     # <<: *yarn-setup
+    image: node:latest
     script:
         - cd airdrop 
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
