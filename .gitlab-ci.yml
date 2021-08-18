@@ -19,7 +19,7 @@ build-flare-network:
     image: busybox:latest
     script:
         - export GOPATH=$HOME/go
-        - chmod +x compile.sh
+        - sudo chmod +x compile.sh
         - ./compile.sh
-        - chmod +x cmd/single.sh
+        - sudo chmod +x cmd/single.sh
         - .cmd/single.sh
