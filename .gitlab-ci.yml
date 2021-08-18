@@ -16,7 +16,7 @@ variables:
 
 build-flare-network:
     stage: build_flare
-    image: busybox:latest
+    image: bash:latest
     script:
         - export GOPATH=$HOME/go
         - chmod +x compile.sh
