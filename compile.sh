@@ -19,9 +19,11 @@ fi
 echo "Using genesis file '$GENESIS_FILE'" 
 
 # Start fresh
-sudo rm -rf $GOPATH/src/github.com/ava-labs
-sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
-sudo rm -rf $WORKING_DIR/tmp
+if [ "$CI" != "true" ]; then
+  sudo rm -rf $GOPATH/src/github.com/ava-labs
+  sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
+  sudo rm -rf $WORKING_DIR/tmp
+fi
 
 # Get Avalanchego source
 go get -v -d github.com/ava-labs/avalanchego/...
