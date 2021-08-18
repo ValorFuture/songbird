@@ -5,27 +5,20 @@ stages:
 variables:
     YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
 
-# .yarn-setup: &yarn-setup
-#     image: node:latest
-#     before_script:
-#         - cd airdrop/
-#         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
-        
 ### Jobs
 test-airdrop:
     stage: airdrop_test
-    # <<: *yarn-setup
     image: node:latest
     script:
         - cd airdrop 
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
         - yarn test
 
-test-state-connector:
+build-flare-network:
     stage: build_flare
-    # <<: *yarn-setup
     image: busybox:latest
     script:
         - export GOPATH=$HOME/go
+        - cp compile.sh /compile.sh
         - ./compile.sh genesis_scdev_airdrop.go
         - .cmd/single
