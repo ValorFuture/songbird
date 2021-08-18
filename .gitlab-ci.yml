@@ -19,6 +19,9 @@ build-flare-network:
     image: bash:latest
     script:
         - export GOPATH=$HOME/go
+        - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+        - gvm install go1.15
+        - gvm use go1.15
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/single.sh
