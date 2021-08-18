@@ -18,7 +18,8 @@ build-flare-network:
     stage: build_flare
     image: busybox:latest
     script:
-        - export GOPATH=$HOME/go
-        - cp compile.sh /compile.sh
-        - ./compile.sh
-        - .cmd/single
+        - echo $(ls)
+        # - export GOPATH=$HOME/go
+        # - cp compile.sh /compile.sh
+        # - ./compile.sh
+        # - .cmd/single
