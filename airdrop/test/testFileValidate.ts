@@ -194,7 +194,7 @@ describe('Validate File testing', function() {
   });
 
   describe('Processing Data', function() {
-    it.only('Should work just fine', function() {
+    it('Should work just fine', function() {
       const contPer = new BigNumber(1);
       const conFact = new BigNumber(1.0073);
       const initAir = new BigNumber(1);
