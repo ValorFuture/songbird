@@ -1,25 +1,25 @@
 stages:
-    - airdrop_test
+    # - airdrop_test
     - build_flare
 
 variables:
     YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
 
 ### Jobs
-test-airdrop:
-    stage: airdrop_test
-    image: node:latest
-    script:
-        - cd airdrop 
-        - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
-        - yarn test
+# test-airdrop:
+#     stage: airdrop_test
+#     image: node:latest
+#     script:
+#         - cd airdrop 
+#         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+#         - yarn test
 
 build-flare-network:
     stage: build_flare
     image: busybox:latest
     script:
-        - echo $(ls)
-        # - export GOPATH=$HOME/go
-        # - cp compile.sh /compile.sh
-        # - ./compile.sh
-        # - .cmd/single
+        - export GOPATH=$HOME/go
+        - chmod +x compile.sh
+        - ./compile.sh
+        - chmod +x cmd/single.sh
+        - .cmd/single.sh
