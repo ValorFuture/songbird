@@ -22,4 +22,4 @@ build-flare-network:
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/single.sh
-        - bash .cmd/single.sh
+        - bash ./cmd/single.sh
