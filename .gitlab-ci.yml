@@ -21,7 +21,7 @@ variables:
         
 ### Jobs
 test-airdrop:
-    stage: test
+    stage: airdrop_test
     # <<: *yarn-setup
     script:
         - cd airdrop 
