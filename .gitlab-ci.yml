@@ -29,7 +29,7 @@ build-flare-network:
     <<: *pipeline-settings
     script:
         - export GOPATH=$HOME/go
-        - apt-get install jq
+        - apk add --no-cache jq
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/export_chain_apis.sh
