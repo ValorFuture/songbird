@@ -44,4 +44,4 @@ test-scdev:
         - git clone https://gitlab.com/flarenetwork/flare-smart-contracts.git
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
         - yarn c
-        - yarn test_system_scdev
+        - yarn test_system_scdev --network scdev
