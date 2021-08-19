@@ -1,14 +1,23 @@
 stages:
     # - airdrop_test
     - build_flare
+    - scdev_test
 
 variables:
     YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
+
+# only run jobs automatically for master barnch push-es
+.pipeline-settings: &pipeline-settings
+    rules:
+        - if: '$CI_BRANCH_NAME == "master"'
+          when: on_success
+        - when: manual
 
 ### Jobs
 # test-airdrop:
 #     stage: airdrop_test
 #     image: node:latest
+#     <<: *pipeline-settings
 #     script:
 #         - cd airdrop 
 #         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
@@ -17,9 +26,22 @@ variables:
 build-flare-network:
     stage: build_flare
     image: golang:1.15
+    <<: *pipeline-settings
     script:
         - export GOPATH=$HOME/go
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/single.sh
         - bash ./cmd/single.sh
+
+test-scdev:
+    stage: scdev_test
+    image: node:latest
+    <<: *pipeline-settings
+    script:
+        - mkdir sc_repo
+        - cd sc_repo
+        - git clone https://gitlab.com/flarenetwork/flare-smart-contracts.git
+        - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+        - yarn c
+        - yarn test_system_scdev
