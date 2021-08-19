@@ -1,5 +1,5 @@
 stages:
-    - airdrop_test
+    # - airdrop_test
     - build_flare
     - scdev_test
 
@@ -14,14 +14,14 @@ variables:
         - when: manual
 
 ### Jobs
-test-airdrop:
-    stage: airdrop_test
-    image: node:latest
-    <<: *pipeline-settings
-    script:
-        - cd airdrop 
-        - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
-        - yarn test
+# test-airdrop:
+#     stage: airdrop_test
+#     image: node:latest
+#     <<: *pipeline-settings
+#     script:
+#         - cd airdrop 
+#         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+#         - yarn test
 
 build-flare-network:
     stage: build_flare
@@ -29,6 +29,7 @@ build-flare-network:
     <<: *pipeline-settings
     script:
         - export GOPATH=$HOME/go
+        - apt-get install jq
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/export_chain_apis.sh
