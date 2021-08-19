@@ -28,8 +28,9 @@ build-flare-network:
     image: golang:1.15
     <<: *pipeline-settings
     script:
+        - apt-get -qq update
+        - apt-get install -y jq
         - export GOPATH=$HOME/go
-        - apk add --no-cache jq
         - chmod +x compile.sh
         - bash ./compile.sh
         - chmod +x cmd/export_chain_apis.sh
