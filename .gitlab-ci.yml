@@ -31,7 +31,7 @@ build-flare-network:
         - export GOPATH=$HOME/go
         - chmod +x compile.sh
         - bash ./compile.sh
-        - chmod +x export_chain_apis.sh
+        - chmod +x cmd/export_chain_apis.sh
         - chmod +x cmd/single.sh
         - bash ./cmd/single.sh
 
