@@ -25,18 +25,17 @@ variables:
 
 build-flare-network:
     stage: build_flare
-    image: golang:1.15
     <<: *pipeline-settings
+    image:
+      name: gcr.io/kaniko-project/executor:debug
+      entrypoint: [""]
     script:
-        - apt-get -qq update
-        - apt-get install -y jq
-        - apt-get install -y sudo
-        - export GOPATH=$HOME/go
-        - chmod +x compile.sh
-        - bash ./compile.sh
-        - chmod +x cmd/export_chain_apis.sh
-        - chmod +x cmd/single.sh
-        - bash ./cmd/single.sh
+      - mkdir -p /kaniko/.docker
+      - echo "$CI_COMMIT_SHA" > COMMIT_HASH
+      - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+      - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/CI/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
+    only:
+      - branches
 
 test-scdev:
     stage: scdev_test
