@@ -34,8 +34,6 @@ build-flare-network:
       - echo "$CI_COMMIT_SHA" > COMMIT_HASH
       - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
       - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/CI/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
-    only:
-      - branches
 
 test-scdev:
     stage: scdev_test
