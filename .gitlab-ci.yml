@@ -30,6 +30,8 @@ build-flare-network:
     script:
         - apt-get -qq update
         - apt-get install -y jq
+        - apt-get install -y sudo
+        - sudo usermod -a -G sudo gitlab-runner
         - export GOPATH=$HOME/go
         - chmod +x compile.sh
         - echo GOPATH
