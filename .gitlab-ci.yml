@@ -31,16 +31,12 @@ build-flare-network:
         - apt-get -qq update
         - apt-get install -y jq
         - apt-get install -y sudo
-        - sudo usermod -a -G sudo gitlab-runner
         - export GOPATH=$HOME/go
         - chmod +x compile.sh
-        - echo GOPATH
-        - echo $GOPATH
-        - echo $(pwd)
-        # - bash ./compile.sh
-        # - chmod +x cmd/export_chain_apis.sh
-        # - chmod +x cmd/single.sh
-        # - bash ./cmd/single.sh
+        - bash ./compile.sh
+        - chmod +x cmd/export_chain_apis.sh
+        - chmod +x cmd/single.sh
+        - bash ./cmd/single.sh
 
 test-scdev:
     stage: scdev_test
