@@ -12,3 +12,5 @@ bin/src/stateco/*-solc-output.json
 bin/src/stateco/*.abi
 bin/src/stateco/*.bin
 tmp/
+utils/airdrop/genesis.random.go
+utils/airdrop/create-genesis.js

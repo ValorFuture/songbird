@@ -26,11 +26,10 @@ else
     exit 1
 fi
 
+# Apply changes to coreth
 echo "Applying Flare-specific changes to Coreth..."
 sudo chmod -R 775 $coreth_path
-
-#evi1m3
-cp -R $AVALANCHE_PATH/scripts/coreth_changes/coreth/. $coreth_path
+cp -R $AVALANCHE_PATH/scripts/coreth_changes/. $coreth_path
 
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
