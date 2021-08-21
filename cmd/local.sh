@@ -51,7 +51,7 @@ NODE_1_PID=`echo $!`
 sleep 3
 
 # NODE 2
-printf "Launching Node 2 at 127.0.0.2:9652\n"
+printf "Launching Node 2 at 127.0.0.1:9652\n"
 nohup ./build/avalanchego \
 --public-ip=127.0.0.1 \
 --http-port=9652 \

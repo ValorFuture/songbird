@@ -52,7 +52,7 @@ export GO111MODULE=on
 go get google.golang.org/grpc@v1.37.0
 export GO111MODULE=
 
-cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+sudo cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 
 # build

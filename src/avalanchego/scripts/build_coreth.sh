@@ -34,8 +34,6 @@ cp -R $AVALANCHE_PATH/scripts/coreth_changes/. $coreth_path
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
 cd "$coreth_path"
-go mod edit -replace=google.golang.org/grpc@v1.37.0=$AVALANCHE_PATH/scripts/grpc_changes/grpc
-go mod tidy
 go build -ldflags "-X github.com/ava-labs/coreth/plugin/evm.Version=$coreth_version" -o "$latest_evm_path" "plugin/"*.go
 cd "$AVALANCHE_PATH"
 
