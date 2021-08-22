@@ -335,10 +335,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.refundGas(apricotPhase1)
 	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
-	// Call the keeper contract trigger method if there is no vm error
+	// Call the deamon contract trigger method if there is no vm error
 	log := log.Root()
 	if vmerr == nil {
-		triggerKeeperAndMint(st, log)
+		triggerDeamonAndMint(st, log)
 	}
 
 	return &ExecutionResult{

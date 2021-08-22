@@ -10,13 +10,13 @@ import (
 )
 
 // Define errors
-type ErrInvalidKeeperData struct{}
+type ErrInvalidDeamonData struct{}
 
-func (e *ErrInvalidKeeperData) Error() string { return "invalid return data from keeper trigger" }
+func (e *ErrInvalidDeamonData) Error() string { return "invalid return data from deamon trigger" }
 
-type ErrKeeperDataEmpty struct{}
+type ErrDeamonDataEmpty struct{}
 
-func (e *ErrKeeperDataEmpty) Error() string { return "return data from keeper trigger empty" }
+func (e *ErrDeamonDataEmpty) Error() string { return "return data from deamon trigger empty" }
 
 type ErrMaxMintExceeded struct {
 	mintMax     *big.Int
@@ -40,7 +40,7 @@ type EVMCaller interface {
 }
 
 // Define maximums that can change by block height
-func GetKeeperGasMultiplier(blockNumber *big.Int) uint64 {
+func GetDeamonGasMultiplier(blockNumber *big.Int) uint64 {
 	switch {
 	default:
 		return 100
@@ -69,7 +69,7 @@ func GetMaximumMintRequest(blockNumber *big.Int) *big.Int {
 	}
 }
 
-func triggerKeeper(evm EVMCaller) (*big.Int, error) {
+func triggerDeamon(evm EVMCaller) (*big.Int, error) {
 	bigZero := big.NewInt(0)
 	// Get the contract to call
 	systemTriggerContract := common.HexToAddress(GetSystemTriggerContractAddr(evm.GetBlockNumber()))
@@ -78,7 +78,7 @@ func triggerKeeper(evm EVMCaller) (*big.Int, error) {
 		vm.AccountRef(systemTriggerContract),
 		systemTriggerContract,
 		GetSystemTriggerSelector(evm.GetBlockNumber()),
-		GetKeeperGasMultiplier(evm.GetBlockNumber())*evm.GetGasLimit(),
+		GetDeamonGasMultiplier(evm.GetBlockNumber())*evm.GetGasLimit(),
 		bigZero)
 	// If no error and a value came back...
 	if triggerErr == nil && triggerRet != nil {
@@ -91,13 +91,13 @@ func triggerKeeper(evm EVMCaller) (*big.Int, error) {
 			return mintRequest, nil
 		} else {
 			// Returned length was not 32 bytes
-			return bigZero, &ErrInvalidKeeperData{}
+			return bigZero, &ErrInvalidDeamonData{}
 		}
 	} else {
 		if triggerErr != nil {
 			return bigZero, triggerErr
 		} else {
-			return bigZero, &ErrKeeperDataEmpty{}
+			return bigZero, &ErrDeamonDataEmpty{}
 		}
 	}
 }
@@ -107,7 +107,7 @@ func mint(evm EVMCaller, mintRequest *big.Int) error {
 	max := GetMaximumMintRequest(evm.GetBlockNumber())
 	if mintRequest.Cmp(big.NewInt(0)) > 0 &&
 		mintRequest.Cmp(max) <= 0 {
-		// Mint the amount asked for on to the keeper contract
+		// Mint the amount asked for on to the deamon contract
 		evm.AddBalance(common.HexToAddress(GetSystemTriggerContractAddr(evm.GetBlockNumber())), mintRequest)
 	} else if mintRequest.Cmp(max) > 0 {
 		// Return error
@@ -123,9 +123,9 @@ func mint(evm EVMCaller, mintRequest *big.Int) error {
 	return nil
 }
 
-func triggerKeeperAndMint(evm EVMCaller, log log.Logger) {
-	// Call the keeper
-	mintRequest, triggerErr := triggerKeeper(evm)
+func triggerDeamonAndMint(evm EVMCaller, log log.Logger) {
+	// Call the deamon
+	mintRequest, triggerErr := triggerDeamon(evm)
 	// If no error...
 	if triggerErr == nil {
 		// time to mint
@@ -133,6 +133,6 @@ func triggerKeeperAndMint(evm EVMCaller, log log.Logger) {
 			log.Warn("Error minting inflation request", "error", mintError)
 		}
 	} else {
-		log.Warn("Keeper trigger in error", "error", triggerErr)
+		log.Warn("Deamon trigger in error", "error", triggerErr)
 	}
 }
