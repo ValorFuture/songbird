@@ -17,10 +17,16 @@ fi
 
 echo "Using genesis file '$GENESIS_FILE'" 
 
+# Make sure permissions are set so we can fiddle with ava and grpc
+chmod -R 775 $GOPATH/src/github.com/ava-labs
+chmod -R 775 $GOPATH/pkg/mod/github.com/ava-labs
+chmod -R 755 $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+
 # Start fresh
-sudo rm -rf $GOPATH/src/github.com/ava-labs
-sudo rm -rf $GOPATH/pkg/mod/github.com/ava-labs
-sudo rm -rf $WORKING_DIR/tmp
+rm -rf $GOPATH/src/github.com/ava-labs
+rm -rf $GOPATH/pkg/mod/github.com/ava-labs
+rm -rf $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+rm -rf $WORKING_DIR/tmp
 
 # Get Avalanchego source
 go get -v -d github.com/ava-labs/avalanchego/...
@@ -52,7 +58,9 @@ export GO111MODULE=on
 go get google.golang.org/grpc@v1.37.0
 export GO111MODULE=
 
-sudo cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+chmod -R 755 $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
+
+cp -R $WORKING_DIR/src/grpc@v1.37.0/. $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 cd $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
 
 # build

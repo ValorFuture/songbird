@@ -28,7 +28,7 @@ fi
 
 # Apply changes to coreth
 echo "Applying Flare-specific changes to Coreth..."
-sudo chmod -R 775 $coreth_path
+chmod -R 775 $coreth_path
 cp -R $AVALANCHE_PATH/scripts/coreth_changes/. $coreth_path
 
 # Build Coreth
