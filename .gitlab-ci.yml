@@ -39,9 +39,12 @@ test-scdev:
     stage: scdev_test
     image: node:latest
     <<: *pipeline-settings
+    services:
+        - name: registry.gitlab.com/flarenetwork/flare:CI_TESTS
     script:
         - mkdir sc_repo
         - cd sc_repo
+        - echo "$SC_DEPLOY_KEY" > .ssh/id_rsa
         - git clone https://gitlab.com/flarenetwork/flare-smart-contracts.git
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
         - yarn c
