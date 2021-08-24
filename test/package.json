@@ -1,0 +1,13 @@
+{
+  "name": "FlareTests",
+  "version": "1.0.0",
+  "description": "Flare network tests",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "author": "Flare SC team",
+  "dependencies": {
+    "openzeppelin-solidity": "^4.3.0",
+    "typescript": "^4.3.5"
+  }
+}
