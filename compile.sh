@@ -6,33 +6,16 @@ if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64"
 
 WORKING_DIR=$(pwd)
 
-if [ -z "$GENESIS_FILE" ]; then
-   GENESIS_FILE=genesis_coston.go
+if [ -d $GOPATH/src/github.com/ava-labs ]; then
+  echo "Removing old version..."
+  chmod -R 775 $GOPATH/src/github.com/ava-labs && rm -rf $GOPATH/src/github.com/ava-labs
+  chmod -R 775 $GOPATH/pkg/mod/github.com/ava-labs && rm -rf $GOPATH/pkg/mod/github.com/ava-labs
 fi
 
-if [ $# -ne 0 ]
-  then
-    GENESIS_FILE=$1
-fi
-
-echo "Using genesis file '$GENESIS_FILE'" 
-
-# Make sure permissions are set so we can fiddle with ava and grpc
-chmod -R 775 $GOPATH/src/github.com/ava-labs
-chmod -R 775 $GOPATH/pkg/mod/github.com/ava-labs
-chmod -R 755 $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-
-# Start fresh
-rm -rf $GOPATH/src/github.com/ava-labs
-rm -rf $GOPATH/pkg/mod/github.com/ava-labs
-rm -rf $GOPATH/pkg/mod/google.golang.org/grpc@v1.37.0
-rm -rf $WORKING_DIR/tmp
-
-# Get Avalanchego source
-go get -v -d github.com/ava-labs/avalanchego/...
+echo "Downloading AvalancheGo..."
+go get -v -d github.com/ava-labs/avalanchego/... &> /dev/null
 cd $GOPATH/src/github.com/ava-labs/avalanchego
-
-# Switch to supported version
+git config --global advice.detachedHead false
 # Hard-coded commit to tag v1.4.12, at the time of this authoring
 # https://github.com/ava-labs/avalanchego/releases/tag/v1.4.12
 git checkout cae93d95c1bcdc02e1370d38ed1c9d87f1c8c814
@@ -71,4 +54,5 @@ cd $GOPATH/src/github.com/ava-labs/avalanchego
 export ROCKSDBALLOWED=true
 ./scripts/build.sh
 rm -rf ./scripts/coreth_changes
-rm -rf ./scripts/grpc_changes
+chmod -R 775 $GOPATH/src/github.com/ava-labs
+chmod -R 775 $GOPATH/pkg/mod/github.com/ava-labs
