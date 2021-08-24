@@ -7,7 +7,7 @@
       "outDir": "dist"
     },
     "include": [
-      "./stateco",
+      "./tests",
     ]
   }
   
