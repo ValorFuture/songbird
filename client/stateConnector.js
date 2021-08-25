@@ -12,25 +12,31 @@ const chains = {
 	'btc': {
 		chainId: 0,
 		confirmations: 4,
-		dataAvailabilityPeriodLength: 1,
+		claimPeriodLength: 1,
 		timeDiffExpected: 900
 	},
 	'ltc': {
 		chainId: 1,
 		confirmations: 12,
-		dataAvailabilityPeriodLength: 1,
+		claimPeriodLength: 1,
 		timeDiffExpected: 150
 	},
 	'doge': {
 		chainId: 2,
 		confirmations: 40,
-		dataAvailabilityPeriodLength: 2,
+		claimPeriodLength: 2,
 		timeDiffExpected: 120
 	},
 	'xrp': {
 		chainId: 3,
 		confirmations: 1,
-		dataAvailabilityPeriodLength: 30,
+		claimPeriodLength: 30,
+		timeDiffExpected: 120
+	},
+	'xlm': {
+		chainId: 4,
+		confirmations: 1,
+		claimPeriodLength: 20,
 		timeDiffExpected: 120
 	}
 };
@@ -43,7 +49,7 @@ var active,
 	username,
 	password,
 	confirmations,
-	dataAvailabilityPeriodLength,
+	claimPeriodLength,
 	timeDiffExpected;
 
 async function postData(url = '', username = '', password = '', data = {}) {
@@ -63,18 +69,18 @@ async function postData(url = '', username = '', password = '', data = {}) {
 // Proof of Work Specific Items
 // ===============================================================
 
-async function powProcessLedger(chainId, genesisLedger, dataAvailabilityPeriodIndex, dataAvailabilityPeriodLength, isCommit) {
-	console.log('\nRetrieving proof of work state hash from ledger:', genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength - 1);
-	const currLedger = genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength - 1;
+async function powProcessLedger(chainId, genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
+	console.log('\nRetrieving proof of work state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
+	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
 	const method = 'getblockhash';
-	const chainTipLedger = currLedger + confirmations*dataAvailabilityPeriodLength;
+	const chainTipLedger = currLedger + confirmations*claimPeriodLength;
 	var currLedgerHash;
 	postData(api, username, password, { method: method, params: [currLedger] })
 		.then(data => {
 			currLedgerHash = '0x' + data.result;
 			postData(api, username, password, { method: method, params: [chainTipLedger] })
 				.then(data => {
-					return proveDataAvailabilityPeriodFinality(chainId, genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength, dataAvailabilityPeriodIndex, currLedgerHash, '0x' + data.result, isCommit);
+					return proveClaimPeriodFinality(chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, currLedgerHash, '0x' + data.result, isCommit);
 				})
 				.catch(error => {
 					processFailure(error);
@@ -89,10 +95,10 @@ async function powProcessLedger(chainId, genesisLedger, dataAvailabilityPeriodIn
 // XRP Specific Functions
 // ===============================================================
 
-async function xrplProcessLedger(genesisLedger, dataAvailabilityPeriodIndex, dataAvailabilityPeriodLength, isCommit) {
-	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength - 1);
-	const currLedger = genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength - 1;
-	const chainTipLedger = currLedger + chains['xrp'].confirmations*chains['xrp'].dataAvailabilityPeriodLength;
+async function xrplProcessLedger(genesisLedger, claimPeriodIndex, claimPeriodLength, isCommit) {
+	console.log('\nRetrieving XRPL state hash from ledger:', genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1);
+	const currLedger = genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength - 1;
+	const chainTipLedger = currLedger + chains['xrp'].confirmations*chains['xrp'].claimPeriodLength;
 	const method = 'ledger';
 	var params = [{
 		'ledger_index': currLedger,
@@ -118,7 +124,7 @@ async function xrplProcessLedger(genesisLedger, dataAvailabilityPeriodIndex, dat
 			}];
 			postData(api, username, password, { method: method, params: params })
 				.then(data => {
-					return proveDataAvailabilityPeriodFinality(chains['xrp'].chainId, genesisLedger + (dataAvailabilityPeriodIndex + 1) * dataAvailabilityPeriodLength, dataAvailabilityPeriodIndex, currLedgerHash, web3.utils.sha3(data.result.ledger_hash), isCommit);
+					return proveClaimPeriodFinality(chains['xrp'].chainId, genesisLedger + (claimPeriodIndex + 1) * claimPeriodLength, claimPeriodIndex, currLedgerHash, web3.utils.sha3(data.result.ledger_hash), isCommit);
 				})
 				.catch(error => {
 					processFailure(error);
@@ -143,7 +149,7 @@ async function run(chainId, minLedger) {
 						params = [];
 					postData(api, username, password, { method: method, params: params })
 						.then(data => {
-							return prepareDataAvailabilityabilityProof(chainId, minLedger, getLatestIndexResult, data.result);
+							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result);
 						})
 				} else if (chainId == 3) {
 					const method = 'ledger';
@@ -158,7 +164,7 @@ async function run(chainId, minLedger) {
 					}];
 					postData(api, username, password, { method: method, params: params })
 						.then(data => {
-							return prepareDataAvailabilityabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
+							return prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, data.result.ledger_index);
 						})
 				} else {
 					return processFailure('Invalid chainId.');
@@ -167,10 +173,10 @@ async function run(chainId, minLedger) {
 		})
 }
 
-async function prepareDataAvailabilityabilityProof(chainId, minLedger, getLatestIndexResult, currentLedger) {
+async function prepareDataAvailabilityProof(chainId, minLedger, getLatestIndexResult, currentLedger) {
 	const currTime = parseInt(Date.now() / 1000);
 	var deferTime;
-	console.log("Finalised claim period:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex) - 1,
+	console.log("Finalised claim period:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) - 1,
 		"\n\x1b[0mFinalised Ledger Index:\t\x1b[33m", parseInt(getLatestIndexResult.finalisedLedgerIndex),
 		"\n\x1b[0mCurrent Ledger Index:\t\x1b[33m", currentLedger);
 	if (getLatestIndexResult.finalisedTimestamp > 0) {
@@ -190,11 +196,11 @@ async function prepareDataAvailabilityabilityProof(chainId, minLedger, getLatest
 		if (deferTime > 0) {
 			console.log("Not enough time elapsed since prior finality, deferring for", deferTime, "seconds.");
 			return setTimeout(() => { run(chainId, minLedger) }, 1000 * (deferTime + 1));
-		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex) + 1) * parseInt(getLatestIndexResult.dataAvailabilityPeriodLength) + confirmations*dataAvailabilityPeriodLength) {
+		} else if (currentLedger >= parseInt(getLatestIndexResult.genesisLedger) + (parseInt(getLatestIndexResult.finalisedClaimPeriodIndex) + 1) * parseInt(getLatestIndexResult.claimPeriodLength) + confirmations*claimPeriodLength) {
 			if (chainId >= 0 && chainId < 3) {
-				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex), parseInt(getLatestIndexResult.dataAvailabilityPeriodLength), true);
+				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
 			} else if (chainId == 3) {
-				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex), parseInt(getLatestIndexResult.dataAvailabilityPeriodLength), true);
+				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), true);
 			} else {
 				return processFailure('Invalid chainId.');
 			}
@@ -206,9 +212,9 @@ async function prepareDataAvailabilityabilityProof(chainId, minLedger, getLatest
 		// Time to reveal the proof
 		if (currTime > parseInt(getLatestIndexResult.timeDiffAvg)) {
 			if (chainId >= 0 && chainId < 3) {
-				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex), parseInt(getLatestIndexResult.dataAvailabilityPeriodLength), false);
+				return powProcessLedger(chainId, parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), false);
 			} else if (chainId == 3) {
-				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedDataAvailabilityPeriodIndex), parseInt(getLatestIndexResult.dataAvailabilityPeriodLength), false);
+				return xrplProcessLedger(parseInt(getLatestIndexResult.genesisLedger), parseInt(getLatestIndexResult.finalisedClaimPeriodIndex), parseInt(getLatestIndexResult.claimPeriodLength), false);
 			} else {
 				return processFailure('Invalid chainId.');
 			}
@@ -220,33 +226,33 @@ async function prepareDataAvailabilityabilityProof(chainId, minLedger, getLatest
 	}
 }
 
-async function proveDataAvailabilityPeriodFinality(chainId, ledger, dataAvailabilityPeriodIndex, dataAvailabilityPeriodHash, chainTipHash, isCommit) {
-	stateConnector.methods.getDataAvailabilityPeriodIndexFinality(
+async function proveClaimPeriodFinality(chainId, ledger, claimPeriodIndex, claimPeriodHash, chainTipHash, isCommit) {
+	stateConnector.methods.getClaimPeriodIndexFinality(
 		parseInt(chainId),
-		dataAvailabilityPeriodIndex).call({
-			from: config.accounts[chainId].address,
+		claimPeriodIndex).call({
+			from: config.accounts[0].address,
 			gas: config.flare.gas,
 			gasPrice: config.flare.gasPrice
 		}).catch(processFailure)
 		.then(result => {
-			console.log('\x1b[0mClaim period:\t\t\x1b[33m', dataAvailabilityPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\ndataAvailabilityHash:\t\x1b[33m', dataAvailabilityPeriodHash, '\x1b[0m\nchainTipHash:\t\t\x1b[33m', chainTipHash, '\x1b[0m');
+			console.log('\x1b[0mClaim period:\t\t\x1b[33m', claimPeriodIndex, '\x1b[0m\nProof reveal:\t\t\x1b[33m', !isCommit, '\x1b[0m\nclaimPeriodHash:\t\x1b[33m', claimPeriodHash, '\x1b[0m\nchainTipHash:\t\t\x1b[33m', chainTipHash, '\x1b[0m');
 			if (result == true) {
 				console.log('This claim period already registered.');
 				setTimeout(() => { return process.exit() }, 5000);
 			} else {
-				web3.eth.getTransactionCount(config.accounts[chainId].address)
+				web3.eth.getTransactionCount(config.accounts[0].address)
 					.then(nonce => {
 						if (isCommit) {
-							return [stateConnector.methods.proveDataAvailabilityPeriodFinality(
+							return [stateConnector.methods.proveClaimPeriodFinality(
 								chainId,
 								ledger,
-								dataAvailabilityPeriodHash,
-								web3.utils.soliditySha3(config.accounts[chainId].address, chainTipHash)).encodeABI(), nonce];
+								claimPeriodHash,
+								web3.utils.soliditySha3(config.accounts[0].address, chainTipHash)).encodeABI(), nonce];
 						} else {
-							return [stateConnector.methods.proveDataAvailabilityPeriodFinality(
+							return [stateConnector.methods.proveClaimPeriodFinality(
 								chainId,
 								ledger,
-								dataAvailabilityPeriodHash,
+								claimPeriodHash,
 								chainTipHash).encodeABI(), nonce];
 						}
 					})
@@ -256,11 +262,11 @@ async function proveDataAvailabilityPeriodFinality(chainId, ledger, dataAvailabi
 							gasPrice: web3.utils.toHex(parseInt(config.flare.gasPrice)),
 							gas: web3.utils.toHex(config.flare.gas),
 							to: stateConnector.options.address,
-							from: config.accounts[chainId].address,
+							from: config.accounts[0].address,
 							data: txData[0]
 						};
 						var tx = new Tx(rawTx, { common: customCommon });
-						var key = Buffer.from(config.accounts[chainId].privateKey, 'hex');
+						var key = Buffer.from(config.accounts[0].privateKey, 'hex');
 						tx.sign(key);
 						var serializedTx = tx.serialize();
 						const txHash = web3.utils.sha3(serializedTx);
@@ -335,29 +341,36 @@ async function configure(chainId) {
 		username = config.chains.btc.username;
 		password = config.chains.btc.password;
 		confirmations = chains['btc'].confirmations;
-		dataAvailabilityPeriodLength = chains['btc'].dataAvailabilityPeriodLength;
+		claimPeriodLength = chains['btc'].claimPeriodLength;
 		timeDiffExpected = chains['btc'].timeDiffExpected;
 	} else if (chainId == 1) {
 		api = config.chains.ltc.api;
 		username = config.chains.ltc.username;
 		password = config.chains.ltc.password;
 		confirmations = chains['ltc'].confirmations;
-		dataAvailabilityPeriodLength = chains['ltc'].dataAvailabilityPeriodLength;
+		claimPeriodLength = chains['ltc'].claimPeriodLength;
 		timeDiffExpected = chains['ltc'].timeDiffExpected;
 	} else if (chainId == 2) {
 		api = config.chains.doge.api;
 		username = config.chains.doge.username;
 		password = config.chains.doge.password;
 		confirmations = chains['doge'].confirmations;
-		dataAvailabilityPeriodLength = chains['doge'].dataAvailabilityPeriodLength;
+		claimPeriodLength = chains['doge'].claimPeriodLength;
 		timeDiffExpected = chains['doge'].timeDiffExpected;
 	} else if (chainId == 3) {
 		api = config.chains.xrp.api;
 		username = config.chains.xrp.username;
 		password = config.chains.xrp.password;
 		confirmations = chains['xrp'].confirmations;
-		dataAvailabilityPeriodLength = chains['xrp'].dataAvailabilityPeriodLength;
+		claimPeriodLength = chains['xrp'].claimPeriodLength;
 		timeDiffExpected = chains['xrp'].timeDiffExpected;
+	} else if (chainId == 4) {
+		api = config.chains.xlm.api;
+		username = config.chains.xlm.username;
+		password = config.chains.xlm.password;
+		confirmations = chains['xlm'].confirmations;
+		claimPeriodLength = chains['xlm'].claimPeriodLength;
+		timeDiffExpected = chains['xlm'].timeDiffExpected;
 	}
 	web3.setProvider(new web3.providers.HttpProvider(config.flare.url));
 	web3.eth.handleRevert = true;
@@ -368,10 +381,10 @@ async function configure(chainId) {
 			chainId: config.flare.chainId,
 		},
 		'petersburg');
-	web3.eth.getBalance(config.accounts[chainId].address)
+	web3.eth.getBalance(config.accounts[0].address)
 		.then(balance => {
-			if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000) {
-				console.log("Not enough FLR reserved in your account, need 1k FLR.");
+			if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000000) {
+				console.log("Not enough FLR reserved in your account, need 1M FLR.");
 				sleep(5000);
 				process.exit();
 			} else {
@@ -382,7 +395,7 @@ async function configure(chainId) {
 				stateConnector = new web3.eth.Contract(contract.abi);
 				// Smart contract EVM bytecode as hex
 				stateConnector.options.data = '0x' + contract.deployedBytecode;
-				stateConnector.options.from = config.accounts[chainId].address;
+				stateConnector.options.from = config.accounts[0].address;
 				stateConnector.options.address = stateConnectorContract;
 				return run(chainId, 0);
 			}
