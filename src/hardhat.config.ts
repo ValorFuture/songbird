@@ -51,9 +51,9 @@ const config: HardhatUserConfig = {
     tests: "./tests",
     cache: "./cache",
     artifacts: "./artifacts",
-    // deploy: 'deploy',
-    // deployments: 'deployments',
-    // imports: 'imports'
+    deploy: 'deploy',
+    deployments: 'deployments',
+    imports: 'imports'
   },
 
   mocha: {
