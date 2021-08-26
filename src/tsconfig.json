@@ -5,13 +5,19 @@
       "strict": true,
       "esModuleInterop": true,
       "outDir": "dist",
-      "resolveJsonModule": true
+      "resolveJsonModule": true,
+      "typeRoots": [
+        "test/types",
+        "node_modules/@types"
+      ]
     },
     "include": [
       "./tests",
+      "./types", 
+      "./typechain-truffle", 
     ],
     "files": [
-      "./hardhat.config.ts"
+      "./hardhat.config.ts",
     ]
   }
   
