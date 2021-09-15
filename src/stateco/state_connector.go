@@ -88,10 +88,6 @@ func GetDisprovePaymentFinalitySelector(blockTime *big.Int) []byte {
 	}
 }
 
-// =======================================================
-// Proof of Work Common
-// =======================================================
-
 type GetPoWRequestPayload struct {
 	Method string   `json:"method"`
 	Params []string `json:"params"`
@@ -101,6 +97,8 @@ type GetPoWBlockCountResp struct {
 	Error  interface{} `json:"error"`
 }
 
+// GetPoWBlockCount gets the latest block height for a proof-of-work chain from
+// the given chain API URL.
 func GetPoWBlockCount(chainURL string, username string, password string) (uint64, bool) {
 	data := GetPoWRequestPayload{
 		Method: "getblockcount",
@@ -152,6 +150,9 @@ type GetPoWBlockHeaderResp struct {
 	Error  interface{}             `json:"error"`
 }
 
+// GetPoWBlockHeader retrieves a block from the given chain API URL by hash. It
+// also checks whether it already has the required number of confirmations, and
+// depends on the username and password for logging in.
 func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL string, username string, password string) (uint64, bool) {
 	data := GetPoWRequestPayload{
 		Method: "getblockheader",
@@ -197,6 +198,11 @@ func GetPoWBlockHeader(ledgerHash string, requiredConfirmations uint64, chainURL
 	return jsonResp.Result.Height, false
 }
 
+// ProveDataAvailabilityPeriodFinalityPoW tries to verify a data finality proof
+// against a proof-of-work chain. It reads the block height, block hash and the
+// number of required confirmations from the return data. It then retrieves
+// the block by hash and compares the block height to the one from the return
+// data.
 func ProveDataAvailabilityPeriodFinalityPoW(checkRet []byte, chainURL string, username string, password string) (bool, bool) {
 	blockCount, err := GetPoWBlockCount(chainURL, username, password)
 	if err {
@@ -243,6 +249,11 @@ type GetPoWTxResp struct {
 	Error  interface{}    `json:"error"`
 }
 
+// GetPoWTx retrieves the transaction with the given hash from the given chain
+// API URL, with the transaction having happened at or before the given block.
+//
+// It depends on everything except the block height, which is used in a nested
+// call to retrieve the block.
 func GetPoWTx(txHash string, voutN uint64, latestAvailableBlock uint64, currencyCode string, chainURL string, username string, password string) ([]byte, uint64, bool) {
 	data := GetPoWTxRequestPayload{
 		Method: "getrawtransaction",
@@ -304,6 +315,13 @@ func GetPoWTx(txHash string, voutN uint64, latestAvailableBlock uint64, currency
 	return crypto.Keccak256(txIdHash, destinationHash, amountHash, currencyHash), inBlock, false
 }
 
+// ProvePaymentFinalityPoW tries to verify a proof of payment finality against
+// a proof-of-work chain. It extracts the transaction hash, the block height and
+// the output index from the return data. Depending on whether we want to prove
+// or disprove a payment, we then compary the payment hash to the hash in the
+// return data and the block hash to the block hash in the return data.
+//
+// PRovePaymentFinalityPoW depends on the return data.
 func ProvePaymentFinalityPoW(checkRet []byte, isDisprove bool, currencyCode string, chainURL string, username string, password string) (bool, bool) {
 	if len(checkRet) < 257 {
 		return false, false
@@ -330,6 +348,12 @@ func ProvePaymentFinalityPoW(checkRet []byte, isDisprove bool, currencyCode stri
 	return false, false
 }
 
+// ProvePoW tries to verify proofs for proof-of-work chains, notably BTC, LTC
+// and DOGE (XDG). It uses a hash of the chain API URL to retrieve the chain API
+// credentials from the environment. It then goes into the function for the
+// respective type of proof, depending on the function selector bytes.
+//
+// It depends on the chain URL, the currency code and the function selector.
 func ProvePoW(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte, currencyCode string, chainURL string) (bool, bool) {
 	var username, password string
 	chainURLhash := sha256.Sum256([]byte(chainURL))
@@ -355,10 +379,6 @@ func ProvePoW(sender common.Address, blockTime *big.Int, functionSelector []byte
 	return false, false
 }
 
-// =======================================================
-// XRP
-// =======================================================
-
 type GetXRPBlockRequestParams struct {
 	LedgerIndex  uint64 `json:"ledger_index"`
 	Full         bool   `json:"full"`
@@ -380,11 +400,13 @@ type GetXRPBlockResponse struct {
 	Validated   bool   `json:"validated"`
 }
 
+// GetXRPBlock retrieves the ledger with the given height from the provided
+// chain API URL. It returns the ledger hash.
 func GetXRPBlock(ledger uint64, chainURL string) (string, bool) {
 	data := GetXRPBlockRequestPayload{
 		Method: "ledger",
 		Params: []GetXRPBlockRequestParams{
-			GetXRPBlockRequestParams{
+			{
 				LedgerIndex:  ledger,
 				Full:         false,
 				Accounts:     false,
@@ -435,6 +457,10 @@ func GetXRPBlock(ledger uint64, chainURL string) (string, bool) {
 	return jsonResp["result"].LedgerHash, false
 }
 
+// ProveDataAvailabilityPeriodFinalityXRP tries to verify a data finality proof
+// against the XRP chain. It extracts the ledger height from the return data,
+// retrieves the ledger at the given height. It then checks whether the ledger
+// hash from the retrieved ledger matches the ledger hash in the return data.
 func ProveDataAvailabilityPeriodFinalityXRP(checkRet []byte, chainURL string) (bool, bool) {
 	ledger := binary.BigEndian.Uint64(checkRet[56:64])
 	ledgerHashString, err := GetXRPBlock(ledger, chainURL)
@@ -474,11 +500,14 @@ type GetXRPTxIssuedCurrency struct {
 	Value    string `json:"value"`
 }
 
+// GetXRPTx attempts to retrieve the transaction with the given hash from the
+// XRP ledger that is at or ahead of the provided ledger height, using the
+// provided chain API URL.
 func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]byte, uint64, bool) {
 	data := GetXRPTxRequestPayload{
 		Method: "tx",
 		Params: []GetXRPTxRequestParams{
-			GetXRPTxRequestParams{
+			{
 				Transaction: txHash,
 				Binary:      false,
 			},
@@ -566,11 +595,17 @@ func GetXRPTx(txHash string, latestAvailableLedger uint64, chainURL string) ([]b
 	destinationHash := crypto.Keccak256([]byte(jsonResp["result"].Destination))
 	destinationTagHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp["result"].DestinationTag))), 32))
 	destinationHash = crypto.Keccak256(destinationHash, destinationTagHash)
-	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(amount))), 32))
+	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(amount)), 32))
 	currencyHash := crypto.Keccak256([]byte(currency))
 	return crypto.Keccak256(txIdHash, destinationHash, amountHash, currencyHash), inLedger, false
 }
 
+// ProvePaymentFinalityXRP tries to verify a proof of payment against the XRP
+// chain. It extracts the transaction hash and the ledger height from the return
+// data and uses the chain API to retrieve the transaction from the XRP ledger
+// at that height (or later).
+// Depending on whether we want to prove or disprove a transaction, it then
+// checks the returned hash and ledger against the provided hash and ledger.
 func ProvePaymentFinalityXRP(checkRet []byte, isDisprove bool, chainURL string) (bool, bool) {
 	paymentHash, inLedger, err := GetXRPTx(string(checkRet[192:]), binary.BigEndian.Uint64(checkRet[88:96]), chainURL)
 	if err {
@@ -590,6 +625,10 @@ func ProvePaymentFinalityXRP(checkRet []byte, isDisprove bool, chainURL string) 
 	return false, false
 }
 
+// ProveXRP tries to verify a proof against the XRP chain. It uses the function
+// selector to decide which verification function to call into.
+//
+// ProveXRP depends on the function selector bytes.
 func ProveXRP(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte, chainURL string) (bool, bool) {
 	if bytes.Equal(functionSelector, GetProveDataAvailabilityPeriodFinalitySelector(blockTime)) {
 		return ProveDataAvailabilityPeriodFinalityXRP(checkRet, chainURL)
@@ -601,18 +640,17 @@ func ProveXRP(sender common.Address, blockTime *big.Int, functionSelector []byte
 	return false, false
 }
 
-// =======================================================
-// ALGO
-// =======================================================
-
+// ProveALGO tries to verify a proof against the Algorand chain. It currently
+// does nothing.
 func ProveALGO(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte, chainURL string) (bool, bool) {
 	return false, false
 }
 
-// =======================================================
-// Common
-// =======================================================
-
+// ProveChain will try to verify a proof against the chain it belongs to. It
+// only calls into the respective specific function for the proof by using
+// the chain ID.
+//
+// ProveChain depends on the chain ID parameter.
 func ProveChain(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte, chainId uint32, chainURL string) (bool, bool) {
 	switch chainId {
 	case 0:
@@ -630,6 +668,14 @@ func ProveChain(sender common.Address, blockTime *big.Int, functionSelector []by
 	}
 }
 
+// ReadChain will read the chain ID from the return data from the contract, byte
+// 28 to 31, and read the corresponding URLs for the chain API from the
+// environment. It will then keep trying to verify the proof against each chain
+// API using the `ProveChain` function, until one of them succeeds, or the
+// configured number of retries has been reached.
+//
+// ReadChain depends on the chain ID from the return data, and from a list of
+// chain API endpoins for each supported chain.
 func ReadChain(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte) bool {
 	chainId := binary.BigEndian.Uint32(checkRet[28:32])
 	var chainURLs string
@@ -674,8 +720,21 @@ func GetVerificationPaths(functionSelector []byte, checkRet []byte) (string, str
 	return prefix + acceptedPrefix + suffix, prefix + rejectedPrefix + suffix
 }
 
-// Verify proof against underlying chain
+// StateConnectorCall is the hook to add state connector calls to the state
+// transition for transaction executions. It will be called when the destination
+// address is the state connector smart contract address and the function
+// selector bytes correspond to one of the three supported proofs.
+//
+// StateConnector depends on a boolean value derived from bytes 88 to 96 of the
+// return data, and a verification store (that is implemented here as a simple
+// file system) which remembers successful proofs.
 func StateConnectorCall(sender common.Address, blockTime *big.Int, functionSelector []byte, checkRet []byte) bool {
+
+	// If byte 88 to 95 of the return data from the state connector smart
+	// contract call contain any value, then we try to connect to read the data
+	// from the underlying chain API in order to verify the proof. This is done
+	// by calling into the `ReadChain` function.
+	// Otherwise, we simply check if the proof has already been verified.
 	if binary.BigEndian.Uint64(checkRet[88:96]) > 0 {
 		go func() {
 			acceptedPath, rejectedPath := GetVerificationPaths(functionSelector, checkRet)
@@ -686,14 +745,12 @@ func StateConnectorCall(sender common.Address, blockTime *big.Int, functionSelec
 					verificationHashStore, err := os.Create(acceptedPath)
 					verificationHashStore.Close()
 					if err != nil {
-						// Permissions problem
 						panic(err)
 					}
 				} else {
 					verificationHashStore, err := os.Create(rejectedPath)
 					verificationHashStore.Close()
 					if err != nil {
-						// Permissions problem
 						panic(err)
 					}
 				}
@@ -705,7 +762,7 @@ func StateConnectorCall(sender common.Address, blockTime *big.Int, functionSelec
 		_, errACCEPTED := os.Stat(acceptedPath)
 		_, errREJECTED := os.Stat(rejectedPath)
 		if errACCEPTED != nil && errREJECTED != nil {
-			for i := 0; i < 2*apiRetries; i++ {
+			for i := 0; i < 2*apiRetries; i++ { // this will take up to 6 seconds
 				_, errACCEPTED = os.Stat(acceptedPath)
 				_, errREJECTED = os.Stat(rejectedPath)
 				if errACCEPTED == nil || errREJECTED == nil {
@@ -720,9 +777,12 @@ func StateConnectorCall(sender common.Address, blockTime *big.Int, functionSelec
 				errDeleteACCEPTED := os.Remove(acceptedPath)
 				errDeleteREJECTED := os.Remove(rejectedPath)
 				if errDeleteACCEPTED != nil && errDeleteREJECTED != nil {
-					// Permissions problem
-					panic(errDeleteACCEPTED)
-					panic(errDeleteREJECTED)
+					if errDeleteACCEPTED != nil {
+						panic(errDeleteACCEPTED)
+					}
+					if errDeleteREJECTED != nil {
+						panic(errDeleteREJECTED)
+					}
 				}
 			}
 		}()

@@ -359,16 +359,46 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		prioritisedFTSOContract                   bool
 	)
 
+	// In Avalanche, every block has a hard-coded coinbase of `0x01...`. This
+	// sanity check ensures that we only execute transactions that comply with
+	// this constraint. This is important, because we use some coinbase magic
+	// later when interacting with the state connector.
 	if st.evm.Context.Coinbase != common.HexToAddress("0x0100000000000000000000000000000000000000") {
 		return nil, fmt.Errorf("Invalid value for block.coinbase")
 	}
+
+	// The first condition is another sanity check, which ensures that we reject
+	// transactions from the hard-coded coinbase address of `0x01...`, in case
+	// anyone was ever able to derive the private key for the address.
+	// We also make sure that no transactions from privileged Flare contracts,
+	// such as the state connector on `0x10...01` or the system trigger on
+	// `0x10...02`, are accepted. This is a sanity check that is a backstop
+	// against exploits on the contracts that would use them to issue
+	// transactions to escalate privileges.
 	if st.msg.From() == common.HexToAddress("0x0100000000000000000000000000000000000000") ||
 		st.msg.From() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.Time)) ||
 		st.msg.From() == common.HexToAddress(GetSystemTriggerContractAddr(st.evm.Context.Time)) {
 		return nil, fmt.Errorf("Invalid sender")
 	}
+
+	// In Avalanche, tokens consumed as gas during a transaction are simply
+	// burned by sending them to the hard-coded coinbase address. We do the same
+	// in Flare, but due to the coinbase magic we do later, we explicitly refer
+	// to the coinbase address as burn address before we manipulate it.
 	burnAddress := st.evm.Context.Coinbase
+
+	// If we don't have a contract creation, which is equivalent of having a
+	// destination address for the transaction (as checked earlier), we evaluate
+	// the destination address to see if we are dealing with a special kind of
+	// transaction within the Flare system.
 	if !contractCreation {
+
+		// If the transaction goes to the state connector contract address, we
+		// determine what kind of transaction it is by checking the first four
+		// bytes of the call data, which allows us to identify the type of
+		// proof.
+		// Otherwise, we check if the transaction goes to a prioritized FSTO
+		// contract, which is located at `0x10...03`.
 		if *msg.To() == common.HexToAddress(GetStateConnectorContractAddr(st.evm.Context.Time)) {
 			selectProveDataAvailabilityPeriodFinality = bytes.Equal(st.data[0:4], GetProveDataAvailabilityPeriodFinalitySelector(st.evm.Context.Time))
 			selectProvePaymentFinality = bytes.Equal(st.data[0:4], GetProvePaymentFinalitySelector(st.evm.Context.Time))
@@ -378,10 +408,68 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 	}
 
+	// In case the previous check has determined that we are dealing with a
+	// state connector transaction, of which we were able to identify the type,
+	// we prepare and execute the state connector call.
+	// Otherwise, we just go into the original transaction calling logic below.
 	if selectProveDataAvailabilityPeriodFinality || selectProvePaymentFinality || selectDisprovePaymentFinality {
-		// Increment the nonce for the next transaction
+
+		// Transactions that are not contract creations need to increase the
+		// nonce on the sending acount. As we are bypassing the normal execution
+		// logic here, we have to increase it, too.
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+		// The gas given to state connector calls is a third of the gas given to
+		// normal transaction calls. As a safe upper limit, a user should thus
+		// put the gas limit for state connector transactions at 3x what he
+		// would give the transaction if it was executed normally. Please note
+		// that this is only the upper limit, and the actual consumption will be
+		// significantly lower in practice, as explained below.
 		stateConnectorGas := st.gas / GetStateConnectorGasDivisor(st.evm.Context.Time)
+
+		// The code below executes the state connector call, which interacts
+		// with the respective chain API, sandwiched between two EVM calls that
+		// are executed against the state connector smart contract on the chain.
+		// 1) The first EVM call executes the smart contract call with a
+		// cainbase of `0x01...`, which makes it a "read-only" transaction from
+		// the perspective of the state connector smart contract. However, it
+		// checks whether the call would, in theory, be successful.
+		// 2) If the first EVM call is successful, we achieved two things: we
+		// avoid making expensive state connector calls for transactions that
+		// would fail anyway, and we have the return data we need to do the
+		// state connector call. We thus proceed to the state connector call,
+		// which either retrieves or checks chain data from the remote chain
+		// API.
+		// 3) Regardless of whether the first EVM call or the state connector
+		// call succeed, we execute a second EVM call. However, if the state
+		// connector call succeeds, we set the coinbase to the sender's address
+		// and thus enable the second EVM call to update the state connector
+		// smart contract's storage.
+		// NOTE: As the first EVM call is read-only, it will consume
+		// significantly less gas than the second EVM call. Additionally, a
+		// third of the gas is reserved for the state connector call, but in
+		// effect always remains unused from the perspective of the EVM. This
+		// means that the effective gas consumption is somewhere between 1-2x
+		// what it would be if it was executed as a normal transaction, with
+		// 1x being the baseline from the second EVM call, and 0.X-1.0x being
+		// added on top for the first read-only EVM call.
+		// TODO: There is probably a way to optimize the gas limit for state
+		// connector call transactions by properly estimating the actual gas
+		// consumed by the first and second EVM calls, and by using a fixed cost
+		// for the state connector call.
+		// TODO: As the state connector call never really consumes gas, it does
+		// not actually carry a cost for the transaction issuer. Nothing stops
+		// the user from using a very high gas limit and having the gas refunded
+		// afterwards. This is not entirely true, as the refund logic caps the
+		// refund at a certain number, to ensure that users can't use crazy gas
+		// limits and fill blocks with transactions that do very little. It
+		// would still be a good idea, though, to actually implement a fixed
+		// cost for the state connector call that is actually consumed, as it is
+		// constitutes an expensive operation for the node operator and could be
+		// abused for denial of service and similar exploits.
+		// If there is no state connector call, we simply go into the normal
+		// transaction execution logic, that either creates a contract or
+		// executes a simple call against the EVM.
 		checkRet, _, checkVmerr := st.evm.Call(sender, st.to(), st.data, stateConnectorGas, st.value)
 		if checkVmerr == nil {
 			chainConfig := st.evm.ChainConfig()
@@ -400,12 +488,23 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if contractCreation {
 			ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
 		} else {
-			// Increment the nonce for the next transaction
 			st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 			ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 		}
 	}
+
+	// After the transaction, Avalanche usually refunds the remaining gas, but
+	// it is capped at half of the used gas to make sure people use reasonable
+	// gas limits in their transactions.
 	st.refundGas(apricotPhase1)
+
+	// On top of the normal gas refund for unused gas, Flare applies an
+	// additional refund for transactions that are sent to the FTSO contract.
+	// This is done so the system remains stable under heavy load, and spam to
+	// other accounts can not affect the FTSO system. Basically, the fee for
+	// FTSO contract calls is hard-coded to a certain nominal gas use and gas
+	// price. If the gas cost for the transaction exceeds this amount, the
+	// difference is refunded to the sender.
 	if vmerr == nil && prioritisedFTSOContract {
 		nominalGasUsed := uint64(21000)
 		nominalGasPrice := uint64(225_000_000_000)
@@ -424,12 +523,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.AddBalance(burnAddress, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 	}
 
-	// Call the keeper contract trigger method if there is no vm error
+	// After every successful transaction, we also trigger the keeper contract,
+	// so it can take care of some book-keeping tasks for the Flare system. We
+	// do so without EVM debugging, and the keeper has the ability to call back
+	// into the EVM for a number of reasons with the additional three methods
+	// that we expose (`Call`, `GetBlockNumber`, `GetGasLimit`, `AddBalance`).
+	// Previously, all keeper calls beyond the first one in a block would
+	// `revert`, which would be undesirable, as it creates errors for expected
+	// behaviour. This was therefore changed to `return`.
 	if vmerr == nil {
-		// Temporarily disable EVM debugging
 		oldDebug := st.evm.Config.Debug
 		st.evm.Config.Debug = false
-		// Call the keeper contract trigger
 		log := log.Root()
 		triggerKeeperAndMint(st, log)
 		st.evm.Config.Debug = oldDebug
