@@ -40,6 +40,10 @@ cp $AVALANCHE_PATH/scripts/coreth_changes/state_transition.go $coreth_path/core/
 cp $AVALANCHE_PATH/scripts/coreth_changes/state_connector.go $coreth_path/core/state_connector.go
 cp $AVALANCHE_PATH/scripts/coreth_changes/keeper.go $coreth_path/core/keeper.go
 cp $AVALANCHE_PATH/scripts/coreth_changes/keeper_test.go $coreth_path/core/keeper_test.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/evm.go $coreth_path/core/vm/evm.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/contracts.go $coreth_path/core/vm/contracts.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/contracts_stateful.go $coreth_path/core/vm/contracts_stateful.go
+cp $AVALANCHE_PATH/scripts/coreth_changes/contracts_stateful_test.go $coreth_path/core/vm/contracts_stateful_test.go
 
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
