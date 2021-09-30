@@ -3,7 +3,6 @@
 
 #!/bin/bash
 if [[ $(pwd) =~ " " ]]; then echo "Working directory path contains a folder with a space in its name, please remove all spaces" && exit; fi
-if [ -z ${GOPATH+x} ]; then echo "GOPATH is not set, visit https://github.com/golang/go/wiki/SettingGOPATH" && exit; fi
 if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64" && exit; fi
 
 WORKING_DIR=$(pwd)
@@ -11,16 +10,15 @@ AVALANCHE_DIR=$WORKING_DIR/avalanchego
 
 if [ ! -d $AVALANCHE_DIR ]; then
   echo "Cloning Avalanche repository..."
-  git clone https://github.com/ava-labs/avalanchego $AVALANCHE_DIR --quiet
+  git clone --quiet https://github.com/ava-labs/avalanchego $AVALANCHE_DIR
 fi
 
 echo "Checking out correct Avalanche version..."
 cd $AVALANCHE_DIR
 # Hard-coded commit to tag v1.5.2, at the time of this authoring
 # https://github.com/ava-labs/avalanchego/releases/tag/v1.5.2
-git checkout master --force --quiet
-git pull --quiet
-git checkout f2e51d790430a171e6d39f72911d98f134942a55 --quiet
+git fetch --quiet --all
+git checkout --quiet f2e51d790430a171e6d39f72911d98f134942a55
 
 GENESIS_FILE=genesis_local.go
 if [ $# -ne 0 ]

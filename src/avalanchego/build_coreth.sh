@@ -19,12 +19,17 @@ if [[ $# -eq 2 ]]; then
     evm_path=$2
 elif [[ $# -eq 0 ]]; then
     if [[ ! -d "$coreth_path" ]]; then
-        go get "gitlab.com/flarenetwork/coreth@$coreth_version"
+        git clone --quiet https://gitlab.com/flarenetwork/coreth.git $coreth_path
     fi
 else
     echo "Invalid arguments to build coreth. Requires either no arguments (default) or two arguments to specify coreth directory and location to add binary."
     exit 1
 fi
+
+echo "Checking out correct Coreth version..."
+cd $coreth_path
+git fetch --quiet --all
+git checkout --quiet $coreth_version
 
 # Build Coreth
 echo "Building Coreth @ ${coreth_version} ..."
