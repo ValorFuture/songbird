@@ -64,10 +64,14 @@ func GetSystemTriggerSelector(blockNumber *big.Int) []byte {
 	}
 }
 
+// Example upgrade to the FTSO price submitter contract that occurs at block.timestamp == 33190134117,
+// which changes the contract address from that time forwards to 0x1000000000000000000000000000000000000004
 func GetPrioritisedFTSOContract(blockTime *big.Int) string {
 	switch {
-	default:
+	case blockTime.Cmp(new(big.Int).SetUint64(33190134117)) < 0:
 		return "0x1000000000000000000000000000000000000003"
+	default:
+		return "0x1000000000000000000000000000000000000004"
 	}
 }
 
