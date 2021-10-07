@@ -49,6 +49,7 @@ cp $WORKING_DIR/src/coreth/vm.go ./scripts/coreth_changes/vm.go
 cp $WORKING_DIR/src/coreth/import_tx.go ./scripts/coreth_changes/import_tx.go
 cp $WORKING_DIR/src/coreth/export_tx.go ./scripts/coreth_changes/export_tx.go
 cp $WORKING_DIR/src/coreth/state_transition.go ./scripts/coreth_changes/state_transition.go
+cp $WORKING_DIR/src/coreth/websocket.go ./scripts/coreth_changes/websocket.go
 cp $WORKING_DIR/src/stateco/state_connector.go ./scripts/coreth_changes/state_connector.go
 cp $WORKING_DIR/src/keeper/keeper.go ./scripts/coreth_changes/keeper.go
 cp $WORKING_DIR/src/keeper/keeper_test.go ./scripts/coreth_changes/keeper_test.go
