@@ -9,13 +9,13 @@ printf "\x1b[34mSongbird Canary Network Deployment\x1b[0m\n\n"
 LAUNCH_DIR=$(pwd)
 
 DB_TYPE=rocksdb
-if [ "$(uname)" != "Linux" ] || [ "$(arch)" != "x86_64"]; then DB_TYPE=leveldb; fi
+if [ "$(uname)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then DB_TYPE=leveldb; fi
 
 # Test and export underlying chain APIs you chose to use for the state connector
 source ./conf/export_chain_apis.sh $LAUNCH_DIR/conf/songbird/chain_apis.json
 
 export FBA_VALs=$LAUNCH_DIR/conf/songbird/fba_validators.json
-AVALANCHE_DIR=$GOPATH/src/github.com/ava-labs/avalanchego
+AVALANCHE_DIR=$LAUNCH_DIR/avalanchego
 cd $AVALANCHE_DIR
 
 # NODE 1
