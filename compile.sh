@@ -3,7 +3,7 @@
 
 #!/bin/bash
 if [[ $(pwd) =~ " " ]]; then echo "Working directory path contains a folder with a space in its name, please remove all spaces" && exit; fi
-if [ "$(uname -m)" != "x86_64" ]; then echo "Machine architecture is not x86_64" && exit; fi
+if [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ]; then echo "Machine architecture is not x86_64 or aarch64" && exit; fi
 
 WORKING_DIR=$(pwd)
 AVALANCHE_DIR=$WORKING_DIR/avalanchego
