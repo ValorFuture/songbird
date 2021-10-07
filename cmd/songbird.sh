@@ -17,15 +17,6 @@ source ./conf/export_chain_apis.sh $LAUNCH_DIR/conf/songbird/chain_apis.json
 export FBA_VALs=$LAUNCH_DIR/conf/songbird/fba_validators.json
 AVALANCHE_DIR=$GOPATH/src/github.com/ava-labs/avalanchego
 cd $AVALANCHE_DIR
-if ! echo $1 | grep -e "--existing" -q
-then
-	rm -rf $LAUNCH_DIR/logs/songbird
-	mkdir -p $LAUNCH_DIR/logs/songbird
-	rm -rf $LAUNCH_DIR/db/songbird
-	mkdir -p $LAUNCH_DIR/db/songbird
-	mkdir -p $LAUNCH_DIR/logs/songbird/node1
-	mkdir -p $LAUNCH_DIR/db/songbird/node1
-fi
 
 # NODE 1
 printf "Launching Songbird Node at 127.0.0.1:9650\n"
