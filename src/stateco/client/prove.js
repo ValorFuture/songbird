@@ -51,181 +51,167 @@ async function postData(url = '', username = '', password = '', data = {}) {
 // ===============================================================
 
 async function run(chainId) {
-	stateConnector.methods.getLatestIndex(parseInt(chainId)).call({
-		from: config.accounts[1].address,
-		gas: config.flare.gas,
-		gasPrice: config.flare.gasPrice
-	}).catch(processFailure)
-		.then(result => {
-			if (chainId >= 0 && chainId < 3) {
-				const method = 'getrawtransaction';
-				const params = [txId, true];
+	if (chainId >= 0 && chainId < 3) {
+		const method = 'getrawtransaction';
+		const params = [txId, true];
+		postData(api, username, password, { method: method, params: params })
+			.then(tx => {
+				const method = 'getblockheader';
+				const params = [tx.result.blockhash];
 				postData(api, username, password, { method: method, params: params })
-					.then(tx => {
-						const method = 'getblockheader';
-						const params = [tx.result.blockhash];
-						postData(api, username, password, { method: method, params: params })
-							.then(block => {
-								const leafPromise = new Promise((resolve, reject) => {
-									const amount = Math.floor(parseFloat(tx.result.vout[voutN].value).toFixed(8)*Math.pow(10,8));
-									console.log('\nchainId: \t\t', chainId, '\n',
-										'ledger: \t\t', block.result.height, '\n',
-										'txId: \t\t\t', tx.result.txid, '\n',
-										'destination: \t\t', tx.result.vout[voutN].scriptPubKey.addresses[0], '\n',
-										'amount: \t\t', amount, '\n',
-										'currency: \t\t', chainName, '\n');
-									const voutNhex = web3.utils.toHex(parseInt(voutN));
-									const txIdFormatted = voutNhex.slice(-1) + tx.result.txid;
-									const txIdHash = web3.utils.soliditySha3(txIdFormatted);
-									const destinationHash = web3.utils.soliditySha3(tx.result.vout[voutN].scriptPubKey.addresses[0]);
-									const amountHash = web3.utils.soliditySha3(amount);
-									const currencyHash = web3.utils.soliditySha3(chainName);
-									const paymentHash = web3.utils.soliditySha3(txIdHash, destinationHash, amountHash, currencyHash);
-									const leaf = {
-										"chainId": chainId,
-										"txId": txIdFormatted,
-										"ledger": parseInt(block.result.height),
-										"destination": destinationHash,
-										"amount": amount,
-										"currency": currencyHash,
-										"paymentHash": paymentHash,
-									}
-									resolve(leaf);
+					.then(block => {
+						const leafPromise = new Promise((resolve, reject) => {
+							const amount = Math.floor(parseFloat(tx.result.vout[voutN].value).toFixed(8)*Math.pow(10,8));
+							console.log('\nchainId: \t\t', chainId, '\n',
+								'ledger: \t\t', block.result.height, '\n',
+								'txId: \t\t\t', tx.result.txid, '\n',
+								'destination: \t\t', tx.result.vout[voutN].scriptPubKey.addresses[0], '\n',
+								'amount: \t\t', amount, '\n',
+								'currency: \t\t', chainName, '\n');
+							const voutNhex = web3.utils.toHex(parseInt(voutN));
+							const txIdFormatted = voutNhex.slice(-1) + tx.result.txid;
+							const txIdHash = web3.utils.soliditySha3(txIdFormatted);
+							const destinationHash = web3.utils.soliditySha3(tx.result.vout[voutN].scriptPubKey.addresses[0]);
+							const amountHash = web3.utils.soliditySha3(amount);
+							const currencyHash = web3.utils.soliditySha3(chainName);
+							const paymentHash = web3.utils.soliditySha3(txIdHash, destinationHash, amountHash, currencyHash);
+							const leaf = {
+								"chainId": chainId,
+								"txId": txIdFormatted,
+								"ledger": parseInt(block.result.height),
+								"destination": destinationHash,
+								"amount": amount,
+								"currency": currencyHash,
+								"paymentHash": paymentHash,
+							}
+							resolve(leaf);
+						})
+						leafPromise.then(leaf => {
+							stateConnector.methods.getPaymentFinality(
+								leaf.chainId,
+								web3.utils.soliditySha3(leaf.txId),
+								leaf.destination,
+								leaf.amount.toString(),
+								leaf.currency).call({
+									from: config.accounts[1].address,
+									gas: config.flare.gas,
+									gasPrice: config.flare.gasPrice
+								}).catch(() => {
 								})
-								leafPromise.then(leaf => {
-									if (leaf.ledger >= result[0] && leaf.ledger < result[3]) {
-										stateConnector.methods.getPaymentFinality(
-											leaf.chainId,
-											web3.utils.soliditySha3(leaf.txId),
-											leaf.destination,
-											leaf.amount.toString(),
-											leaf.currency).call({
-												from: config.accounts[1].address,
-												gas: config.flare.gas,
-												gasPrice: config.flare.gasPrice
-											}).catch(() => {
-											})
-											.then(paymentResult => {
-												if (typeof paymentResult != "undefined") {
-													if ("finality" in paymentResult) {
-														if (paymentResult.finality == true) {
-															console.log('Payment already proven.');
-															setTimeout(() => { return process.exit() }, 2500);
-														} else {
-															return provePaymentFinality(leaf);
-														}
-													} else {
-														return processFailure('Bad response from underlying chain.')
-													}
-												} else {
-													return provePaymentFinality(leaf);
-												}
-											})
-									} else {
-										return processFailure('Transaction not yet finalised on Flare.')
-									}
-								})
-							})
-					})
-			} else if (chainId == 3) {
-				const method = 'tx';
-				const params = [{
-					'transaction': txId,
-					'binary': false
-				}];
-				postData(api, config.chains.xrp.username, config.chains.xrp.password, { method: method, params: params })
-					.then(tx => {
-						if (tx.result.TransactionType == 'Payment') {
-							const leafPromise = new Promise((resolve, reject) => {
-								var destinationTag;
-								if (!("DestinationTag" in tx.result)) {
-									destinationTag = 0;
-								} else {
-									destinationTag = parseInt(tx.result.DestinationTag);
-								}
-								var currency;
-								var amount;
-								if (typeof tx.result.meta.delivered_amount == "string") {
-									currency = "xrp";
-									amount = parseInt(tx.result.meta.delivered_amount);
-								} else {
-									currency = tx.result.meta.delivered_amount.currency + tx.result.meta.delivered_amount.issuer;
-									amount = parseFloat(tx.result.meta.delivered_amount.value).toFixed(15)*Math.pow(10,15);
-								}
-								console.log('\nchainId: \t\t', chainId, '\n',
-									'ledger: \t\t', tx.result.inLedger, '\n',
-									'txId: \t\t\t', tx.result.hash, '\n',
-									'destination: \t\t', tx.result.Destination, '\n',
-									'destinationTag: \t', destinationTag, '\n',
-									'amount: \t\t', amount, '\n',
-									'currency: \t\t', currency, '\n');
-								const txIdHash = web3.utils.soliditySha3(tx.result.hash);
-								const destinationHash = web3.utils.soliditySha3(web3.utils.soliditySha3(tx.result.Destination), web3.utils.soliditySha3(destinationTag));
-								const amountHash = web3.utils.soliditySha3(amount);
-								const currencyHash = web3.utils.soliditySha3(currency);
-								const paymentHash = web3.utils.soliditySha3(txIdHash, destinationHash, amountHash, currencyHash);
-								const leaf = {
-									"chainId": chainId,
-									"txId": tx.result.hash,
-									"ledger": parseInt(tx.result.inLedger),
-									"destination": destinationHash,
-									"amount": amount,
-									"currency": currencyHash,
-									"paymentHash": paymentHash,
-								}
-								resolve(leaf);
-							})
-							leafPromise.then(leaf => {
-								if (leaf.ledger >= result[0] && leaf.ledger < result[3]) {
-									stateConnector.methods.getPaymentFinality(
-										leaf.chainId,
-										web3.utils.soliditySha3(leaf.txId),
-										leaf.destination,
-										leaf.amount.toString(),
-										leaf.currency).call({
-											from: config.accounts[1].address,
-											gas: config.flare.gas,
-											gasPrice: config.flare.gasPrice
-										}).catch(() => {
-										})
-										.then(paymentResult => {
-											if (typeof paymentResult != "undefined") {
-												if ("finality" in paymentResult) {
-													if (paymentResult.finality == true) {
-														console.log('Payment already proven.');
-														setTimeout(() => { return process.exit() }, 2500);
-													} else {
-														return provePaymentFinality(leaf);
-													}
-												} else {
-													return processFailure('Bad response from underlying chain.')
-												}
+								.then(paymentResult => {
+									if (typeof paymentResult != "undefined") {
+										if ("finality" in paymentResult) {
+											if (paymentResult.finality == true) {
+												console.log('Payment already proven.');
+												setTimeout(() => { return process.exit() }, 2500);
 											} else {
-												return provePaymentFinality(leaf);
+												return setPaymentFinality(leaf);
 											}
-										})
+										} else {
+											return processFailure('Bad response from underlying chain.')
+										}
+									} else {
+										return setPaymentFinality(leaf);
+									}
+								})
+						})
+					})
+			})
+	} else if (chainId == 3) {
+		const method = 'tx';
+		const params = [{
+			'transaction': txId,
+			'binary': false
+		}];
+		postData(api, config.chains.xrp.username, config.chains.xrp.password, { method: method, params: params })
+			.then(tx => {
+				if (tx.result.TransactionType == 'Payment') {
+					const leafPromise = new Promise((resolve, reject) => {
+						var destinationTag;
+						if (!("DestinationTag" in tx.result)) {
+							destinationTag = 0;
+						} else {
+							destinationTag = parseInt(tx.result.DestinationTag);
+						}
+						var currency;
+						var amount;
+						if (typeof tx.result.meta.delivered_amount == "string") {
+							currency = "xrp";
+							amount = parseInt(tx.result.meta.delivered_amount);
+						} else {
+							currency = tx.result.meta.delivered_amount.currency + tx.result.meta.delivered_amount.issuer;
+							amount = parseFloat(tx.result.meta.delivered_amount.value).toFixed(15)*Math.pow(10,15);
+						}
+						console.log('\nchainId: \t\t', chainId, '\n',
+							'ledger: \t\t', tx.result.inLedger, '\n',
+							'txId: \t\t\t', tx.result.hash, '\n',
+							'destination: \t\t', tx.result.Destination, '\n',
+							'destinationTag: \t', destinationTag, '\n',
+							'amount: \t\t', amount, '\n',
+							'currency: \t\t', currency, '\n');
+						const txIdHash = web3.utils.soliditySha3(tx.result.hash);
+						const destinationHash = web3.utils.soliditySha3(web3.utils.soliditySha3(tx.result.Destination), web3.utils.soliditySha3(destinationTag));
+						const amountHash = web3.utils.soliditySha3(amount);
+						const currencyHash = web3.utils.soliditySha3(currency);
+						const paymentHash = web3.utils.soliditySha3(txIdHash, destinationHash, amountHash, currencyHash);
+						const leaf = {
+							"chainId": chainId,
+							"txId": tx.result.hash,
+							"ledger": parseInt(tx.result.inLedger),
+							"destination": destinationHash,
+							"amount": amount,
+							"currency": currencyHash,
+							"paymentHash": paymentHash,
+						}
+						resolve(leaf);
+					})
+					leafPromise.then(leaf => {
+						stateConnector.methods.getPaymentFinality(
+							leaf.chainId,
+							web3.utils.soliditySha3(leaf.txId),
+							leaf.destination,
+							leaf.amount.toString(),
+							leaf.currency).call({
+								from: config.accounts[1].address,
+								gas: config.flare.gas,
+								gasPrice: config.flare.gasPrice
+							}).catch(() => {
+							})
+							.then(paymentResult => {
+								if (typeof paymentResult != "undefined") {
+									if ("finality" in paymentResult) {
+										if (paymentResult.finality == true) {
+											console.log('Payment already proven.');
+											setTimeout(() => { return process.exit() }, 2500);
+										} else {
+											return setPaymentFinality(leaf);
+										}
+									} else {
+										return processFailure('Bad response from underlying chain.')
+									}
 								} else {
-									return processFailure('Transaction not yet finalised on Flare.')
+									return setPaymentFinality(leaf);
 								}
 							})
-						} else {
-							console.log('Transaction type not yet supported.');
-							setTimeout(() => { return process.exit() }, 2500);
-						}
 					})
-			} else {
-				return processFailure('Invalid chainId.');
-			}
-		})
+				} else {
+					console.log('Transaction type not yet supported.');
+					setTimeout(() => { return process.exit() }, 2500);
+				}
+			})
+	} else {
+		return processFailure('Invalid chainId.');
+	}
 }
 
-async function provePaymentFinality(leaf) {
+async function setPaymentFinality(leaf) {
 	web3.eth.getTransactionCount(config.accounts[1].address)
 		.then(nonce => {
-			return [stateConnector.methods.provePaymentFinality(
+			return [stateConnector.methods.setPaymentFinality(
+				true,
 				leaf.chainId,
-				leaf.paymentHash,
 				leaf.ledger,
+				leaf.paymentHash,
 				leaf.txId).encodeABI(), nonce];
 		})
 		.then(txData => {
@@ -295,25 +281,16 @@ async function configure(chainId) {
 			chainId: config.flare.chainId,
 		},
 		'petersburg');
-	web3.eth.getBalance(config.accounts[1].address)
-		.then(balance => {
-			if (parseInt(web3.utils.fromWei(balance, "ether")) < 1000) {
-				console.log("Not enough FLR reserved in your account, need 1k FLR.");
-				sleep(5000);
-				process.exit();
-			} else {
-				// Read the compiled contract code
-				let source = fs.readFileSync("../../../bin/src/stateco/StateConnector.json");
-				let contract = JSON.parse(source);
-				// Create Contract proxy class
-				stateConnector = new web3.eth.Contract(contract.abi);
-				// Smart contract EVM bytecode as hex
-				stateConnector.options.data = '0x' + contract.deployedBytecode;
-				stateConnector.options.from = config.accounts[1].address;
-				stateConnector.options.address = stateConnectorContract;
-				return run(chainId);
-			}
-		})
+	// Read the compiled contract code
+	let source = fs.readFileSync("../../../bin/src/stateco/StateConnector.json");
+	let contract = JSON.parse(source);
+	// Create Contract proxy class
+	stateConnector = new web3.eth.Contract(contract.abi);
+	// Smart contract EVM bytecode as hex
+	stateConnector.options.data = '0x' + contract.deployedBytecode;
+	stateConnector.options.from = config.accounts[1].address;
+	stateConnector.options.address = stateConnectorContract;
+	return run(chainId);
 }
 
 async function processFailure(error) {

@@ -16,20 +16,6 @@ The state connector system is a competitive approach for proving the state of an
 
 7. **Every Flare validator independently verifies an underlying chain's state**: If your own Flare validator observes the canonical state of an underlying chain, then you will not lose safety against that chain.
 
-In a new terminal window, the following command launches a web3 service that continually competes to prove data availability from the XRP Ledger to the Flare Network. The system submits a constant-sized data availability proof for each range of ledgers on the underlying chain, and the state connector system on Flare rewards the first account to successfully do so for each range of ledgers. This allows one to then prove that a payment exists on an underlying chain to any contract on the Flare Network, such as the F-asset contract.
-
-```
-cd client
-yarn
-./proveDataAvailability.sh xrp
-```
-
-Similarly, Litecoin block data availability can be proven using the command:
-
-```
-./proveDataAvailability.sh ltc
-```
-
 # Verify an Underlying Chain Payment on Flare
 
 ## Proving a Payment
@@ -78,4 +64,4 @@ node prove xrp 67B3F2CAF2905BC67FEB5417C1C3F9AA941DF8984F1F49EC48D4DCADFAC94418
 
 ## Two-stage Payment Proof Mechanism
 
-The above commands must be run twice with a `30` second gap in between command runs in order to complete the proving/disproving of a payment. The purpose of this is that it removes the underlying-chain API-call delay from the synchronous EVM execution and instead puts the API-call delay burden on the user proving a payment. This same backgrounded API-call approach is used in the data availability proof setup, however its two-stage call is handled implicitly as part of the commit and reveal scheme so does not require extra user input.
+The above commands must be run twice with a `30` second gap in between command runs in order to complete the proving/disproving of a payment. The purpose of this is that it removes the underlying-chain API-call delay from the synchronous EVM execution and instead puts the API-call delay burden on the user proving a payment.
