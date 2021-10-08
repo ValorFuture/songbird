@@ -101,7 +101,7 @@ async function run(chainId) {
 								.then(paymentResult => {
 									if (typeof paymentResult != "undefined") {
 										if ("finality" in paymentResult) {
-											if (paymentResult.finality == true) {
+											if (paymentResult.proven == true) {
 												console.log('Payment already proven.');
 												setTimeout(() => { return process.exit() }, 2500);
 											} else {
@@ -142,6 +142,7 @@ async function run(chainId) {
 							currency = tx.result.meta.delivered_amount.currency + tx.result.meta.delivered_amount.issuer;
 							amount = parseFloat(tx.result.meta.delivered_amount.value).toFixed(15)*Math.pow(10,15);
 						}
+						var utxo = 0;
 						console.log('\nchainId: \t\t', chainId, '\n',
 							'ledger: \t\t', tx.result.inLedger, '\n',
 							'txId: \t\t\t', tx.result.hash, '\n',
@@ -150,13 +151,15 @@ async function run(chainId) {
 							'amount: \t\t', amount, '\n',
 							'currency: \t\t', currency, '\n');
 						const txIdHash = web3.utils.soliditySha3(tx.result.hash);
+						const utxoHash = web3.utils.soliditySha3(utxo);
 						const destinationHash = web3.utils.soliditySha3(web3.utils.soliditySha3(tx.result.Destination), web3.utils.soliditySha3(destinationTag));
 						const amountHash = web3.utils.soliditySha3(amount);
 						const currencyHash = web3.utils.soliditySha3(currency);
-						const paymentHash = web3.utils.soliditySha3(txIdHash, destinationHash, amountHash, currencyHash);
+						const paymentHash = web3.utils.soliditySha3(txIdHash, utxoHash, destinationHash, amountHash, currencyHash);
 						const leaf = {
 							"chainId": chainId,
-							"txId": tx.result.hash,
+							"txId": '0x' + tx.result.hash,
+							"utxo": utxo,
 							"ledger": parseInt(tx.result.inLedger),
 							"destination": destinationHash,
 							"amount": amount,
@@ -169,6 +172,7 @@ async function run(chainId) {
 						stateConnector.methods.getPaymentFinality(
 							leaf.chainId,
 							web3.utils.soliditySha3(leaf.txId),
+							leaf.utxo,
 							leaf.destination,
 							leaf.amount.toString(),
 							leaf.currency).call({
@@ -211,8 +215,9 @@ async function setPaymentFinality(leaf) {
 				true,
 				leaf.chainId,
 				leaf.ledger,
-				leaf.paymentHash,
-				leaf.txId).encodeABI(), nonce];
+				leaf.utxo,
+				leaf.txId,
+				leaf.paymentHash).encodeABI(), nonce];
 		})
 		.then(txData => {
 			var rawTx = {

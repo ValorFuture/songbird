@@ -29,7 +29,7 @@ contract StateConnector {
 // Events
 //====================================================================
 
-    event PaymentProven(bool prove, uint64 chainId, uint64 ledger, string txId, bytes32 paymentHash);
+    event PaymentSet(bool prove, uint64 chainId, uint64 ledger, bytes32 txId, bytes32 paymentHash);
 
 //====================================================================
 // Constructor
@@ -46,24 +46,24 @@ contract StateConnector {
         bool prove,
         uint64 chainId,
         uint64 ledger,
-        bytes32 paymentHash,
-        string memory txId
+        uint64 utxo,
+        bytes32 txId,
+        bytes32 paymentHash
     ) external returns (
         uint256 _instructions,
-        bytes32 _paymentHash,
-        string memory _txId
+        bytes32 _txId,
+        bytes32 _paymentHash
     ) {
         require(ledger > 0, "ledger == 0");
         require(paymentHash > 0x0, "paymentHash == 0x0");
-        require(bytes(txId).length > 0, "txId is empty string");
+        require(txId > 0x0, "txId == 0x0");
         require(block.coinbase == msg.sender || block.coinbase == GENESIS_COINBASE, "invalid block.coinbase value");
 
-        bytes32 txIdHash = keccak256(abi.encodePacked(txId));
-        bytes32 finalisedPaymentLoc = keccak256(abi.encodePacked("finalisedPayment", chainId, paymentHash, txIdHash));
+        bytes32 finalisedPaymentLoc = keccak256(abi.encodePacked("finalisedPayment", chainId, paymentHash));
         require(!payments[finalisedPaymentLoc].proven, "payment already proven");
 
         bool initialCommit;
-        bytes32 proposedLoc = keccak256(abi.encodePacked(prove, chainId, ledger, paymentHash, txIdHash));
+        bytes32 proposedLoc = keccak256(abi.encodePacked(prove, chainId, ledger, paymentHash));
         if (payments[proposedLoc].exists) {
             require(block.timestamp >= payments[proposedLoc].revealTime, 
                 "block.timestamp < payments[proposedLoc].revealTime");
@@ -92,29 +92,31 @@ contract StateConnector {
                     ledger,
                     paymentHash
                 );
-                emit PaymentProven(prove, chainId, ledger, txId, paymentHash);
+                emit PaymentSet(prove, chainId, ledger, txId, paymentHash);
             }
         }
 
-        return ((initialCommit?1:0)*2**196 + (prove?1:0)*2**128 + chainId*2**64 + ledger, paymentHash, txId);
+        return (uint256((initialCommit?1:0))<<224 | uint256((prove?1:0))<<192 | uint256(chainId)<<128 | uint256(ledger)<<64 | utxo, txId, paymentHash);
     }
 
     function getPaymentFinality(
         uint64 chainId,
-        bytes32 txIdHash,
+        bytes32 txId,
+        uint64 utxo,
         bytes32 destinationHash,
         uint64 amount,
         bytes32 currencyHash
     ) external view returns (
-        bool finality,
-        uint64 ledger
+        bool _proven,
+        uint64 _indexValue
     ) {
         bytes32 paymentHash = keccak256(abi.encodePacked(
-            txIdHash,
+            txId,
+            keccak256(abi.encode(utxo)),
             destinationHash,
             keccak256(abi.encode(amount)),
             currencyHash));
-        bytes32 finalisedPaymentLoc = keccak256(abi.encodePacked("finalisedPayment", chainId, paymentHash, txIdHash));
+        bytes32 finalisedPaymentLoc = keccak256(abi.encodePacked("finalisedPayment", chainId, paymentHash));
         require(payments[finalisedPaymentLoc].exists, "payment does not exist");
         require(payments[finalisedPaymentLoc].hashValue == paymentHash, "invalid paymentHash");
 

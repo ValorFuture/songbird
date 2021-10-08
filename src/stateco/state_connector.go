@@ -56,7 +56,7 @@ func GetStateConnectorGasDivisor(chainID *big.Int, blockTime *big.Int) uint64 {
 	}
 }
 
-func GetMaxAllowedChains(chainID *big.Int, blockTime *big.Int) uint32 {
+func GetMaxAllowedChains(chainID *big.Int, blockTime *big.Int) uint64 {
 	switch {
 	default:
 		return 5
@@ -80,7 +80,7 @@ func GetStateConnectorContractAddr(chainID *big.Int, blockTime *big.Int) string 
 func SetPaymentFinalitySelector(chainID *big.Int, blockTime *big.Int) []byte {
 	switch {
 	default:
-		return []byte{0x77, 0x2c, 0x22, 0x3c}
+		return []byte{0x1b, 0xb1, 0x66, 0xb1}
 	}
 }
 
@@ -304,12 +304,11 @@ type GetXRPTxIssuedCurrency struct {
 }
 
 func GetXRPTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, bool) {
-	txHash := string(instructions.TxId)
 	data := GetXRPTxRequestPayload{
 		Method: "tx",
 		Params: []GetXRPTxRequestParams{
 			GetXRPTxRequestParams{
-				Transaction: txHash,
+				Transaction: hex.EncodeToString(instructions.TxId),
 				Binary:      false,
 			},
 		},
@@ -393,12 +392,13 @@ func GetXRPTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, b
 		currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
 	}
 	txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))
+	utxoHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(0))), 32))
 	destinationHash := crypto.Keccak256([]byte(jsonResp["result"].Destination))
 	destinationTagHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp["result"].DestinationTag))), 32))
 	destinationHash = crypto.Keccak256(destinationHash, destinationTagHash)
 	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(amount))), 32))
 	currencyHash := crypto.Keccak256([]byte(currency))
-	return crypto.Keccak256(txIdHash, destinationHash, amountHash, currencyHash), inLedger, false
+	return crypto.Keccak256(txIdHash, utxoHash, destinationHash, amountHash, currencyHash), inLedger, false
 }
 
 func ProvePaymentXRP(instructions Instructions, basicAuth BasicAuth) (bool, bool) {
@@ -523,7 +523,7 @@ func GetVerificationPaths(checkRet []byte) (string, string) {
 	prefix := "cache/"
 	acceptedPrefix := "ACCEPTED"
 	rejectedPrefix := "REJECTED"
-	verificationHash := hex.EncodeToString(crypto.Keccak256(checkRet))
+	verificationHash := hex.EncodeToString(checkRet)
 	suffix := "_" + verificationHash
 	return prefix + acceptedPrefix + suffix, prefix + rejectedPrefix + suffix
 }
@@ -533,6 +533,7 @@ type Instructions struct {
 	Prove           bool
 	ChainId         uint64
 	Ledger          uint64
+	Utxo            uint64
 	AvailableLedger uint64
 	PaymentHash     []byte
 	TxId            []byte
@@ -540,25 +541,28 @@ type Instructions struct {
 
 func ParseInstructions(checkRet []byte, availableLedger uint64) Instructions {
 	return Instructions{
-		InitialCommit:   binary.BigEndian.Uint64(checkRet[0:8]) == 1,
-		Prove:           binary.BigEndian.Uint64(checkRet[8:16]) == 1,
-		ChainId:         binary.BigEndian.Uint64(checkRet[16:24]),
-		Ledger:          binary.BigEndian.Uint64(checkRet[24:32]),
+		InitialCommit:   binary.BigEndian.Uint32(checkRet[0:4]) == 1,
+		Prove:           binary.BigEndian.Uint32(checkRet[4:8]) == 1,
+		ChainId:         binary.BigEndian.Uint64(checkRet[8:16]),
+		Ledger:          binary.BigEndian.Uint64(checkRet[16:24]),
+		Utxo:            binary.BigEndian.Uint64(checkRet[24:32]),
 		AvailableLedger: availableLedger,
-		PaymentHash:     checkRet[32:64],
-		TxId:            checkRet[64:],
+		TxId:            checkRet[32:64],
+		PaymentHash:     checkRet[64:96],
 	}
 }
 
 // Verify proof against underlying chain
 func StateConnectorCall(blockTime *big.Int, checkRet []byte, availableLedger uint64) bool {
+	if len(checkRet) != 96 {
+		return false
+	}
 	instructions := ParseInstructions(checkRet, availableLedger)
 	if instructions.InitialCommit {
 		go func() {
-			acceptedPath, rejectedPath := GetVerificationPaths(checkRet)
+			acceptedPath, rejectedPath := GetVerificationPaths(checkRet[8:])
 			_, errACCEPTED := os.Stat(acceptedPath)
-			_, errREJECTED := os.Stat(rejectedPath)
-			if errACCEPTED != nil && errREJECTED != nil {
+			if errACCEPTED != nil {
 				if ReadChainWithRetries(blockTime, instructions) {
 					verificationHashStore, err := os.Create(acceptedPath)
 					verificationHashStore.Close()
@@ -578,7 +582,7 @@ func StateConnectorCall(blockTime *big.Int, checkRet []byte, availableLedger uin
 		}()
 		return true
 	} else {
-		acceptedPath, rejectedPath := GetVerificationPaths(checkRet)
+		acceptedPath, rejectedPath := GetVerificationPaths(checkRet[8:])
 		_, errACCEPTED := os.Stat(acceptedPath)
 		_, errREJECTED := os.Stat(rejectedPath)
 		if errACCEPTED != nil && errREJECTED != nil {
@@ -591,18 +595,6 @@ func StateConnectorCall(blockTime *big.Int, checkRet []byte, availableLedger uin
 				time.Sleep(apiRetryDelay)
 			}
 		}
-		go func() {
-			removeFulfilledAPIRequests := os.Getenv("REMOVE_FULFILLED_API_REQUESTS")
-			if removeFulfilledAPIRequests == "1" {
-				errDeleteACCEPTED := os.Remove(acceptedPath)
-				errDeleteREJECTED := os.Remove(rejectedPath)
-				if errDeleteACCEPTED != nil && errDeleteREJECTED != nil {
-					// Permissions problem
-					panic(errDeleteACCEPTED)
-					panic(errDeleteREJECTED)
-				}
-			}
-		}()
 		return errACCEPTED == nil
 	}
 }

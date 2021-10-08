@@ -381,9 +381,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		stateConnectorGas := st.gas / GetStateConnectorGasDivisor(chainID, st.evm.Context.Time)
 		checkRet, _, checkVmerr := st.evm.Call(sender, st.to(), st.data, stateConnectorGas, st.value)
 		if checkVmerr == nil {
-			if GetStateConnectorActivated(chainID, st.evm.Context.Time) && binary.BigEndian.Uint32(checkRet[28:32]) < GetMaxAllowedChains(chainID, st.evm.Context.Time) {
+			if GetStateConnectorActivated(chainID, st.evm.Context.Time) && binary.BigEndian.Uint64(checkRet[8:16]) < GetMaxAllowedChains(chainID, st.evm.Context.Time) {
 				// checkRet, _, checkVmerr := st.evm.Call(sender, st.to(), st.data, stateConnectorGas, st.value)
-				if StateConnectorCall(st.evm.Context.Time, checkRet, uint64(100000000000)) {
+				if StateConnectorCall(st.evm.Context.Time, checkRet, uint64(63880001)) {
 					originalCoinbase := st.evm.Context.Coinbase
 					defer func() {
 						st.evm.Context.Coinbase = originalCoinbase
