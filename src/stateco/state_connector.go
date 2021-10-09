@@ -80,7 +80,7 @@ func GetStateConnectorContractAddr(chainID *big.Int, blockTime *big.Int) string 
 func SetPaymentFinalitySelector(chainID *big.Int, blockTime *big.Int) []byte {
 	switch {
 	default:
-		return []byte{0x1b, 0xb1, 0x66, 0xb1}
+		return []byte{0xb3, 0x8f, 0x3d, 0x3e}
 	}
 }
 
@@ -178,19 +178,12 @@ type GetPoWTxResp struct {
 	Error  interface{}    `json:"error"`
 }
 
-func GetPoWTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, bool) {
-	if len(instructions.TxId) < 65 {
-		return []byte{}, 0, false
-	}
-	voutN, err := strconv.ParseUint(string(instructions.TxId[0:1]), 16, 64)
-	if err != nil {
-		return []byte{}, 0, false
-	}
-	txHash := string(instructions.TxId[0:65])
+func GetPoWTx(instructions Instructions, basicAuth BasicAuth, firstPass bool, voutOverride uint64) ([]byte, uint64, bool) {
+	voutN := uint64(0) // To-do: make this a search across first 16 voutN values
 	data := GetPoWTxRequestPayload{
 		Method: "getrawtransaction",
 		Params: GetPoWTxRequestParams{
-			TxID:    txHash[1:],
+			TxID:    hex.EncodeToString(instructions.TxId),
 			Verbose: true,
 		},
 	}
@@ -227,7 +220,7 @@ func GetPoWTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, b
 	if jsonResp.Error != nil {
 		return []byte{}, 0, true
 	}
-	if uint64(len(jsonResp.Result.Vout)) <= voutN {
+	if uint64(len(jsonResp.Result.Vout)) <= uint64(voutN) {
 		return []byte{}, 0, false
 	}
 	if jsonResp.Result.Vout[voutN].ScriptPubKey.Type != "pubkeyhash" || len(jsonResp.Result.Vout[voutN].ScriptPubKey.Addresses) != 1 {
@@ -240,28 +233,21 @@ func GetPoWTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, b
 	if inBlock == 0 || inBlock >= instructions.AvailableLedger {
 		return []byte{}, 0, false
 	}
-	txIdHash := crypto.Keccak256([]byte(txHash))
+	txIdHash := crypto.Keccak256(instructions.TxId)
+	utxoHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(voutN)), 32))
 	destinationHash := crypto.Keccak256([]byte(jsonResp.Result.Vout[voutN].ScriptPubKey.Addresses[0]))
 	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp.Result.Vout[voutN].Value*math.Pow(10, 8)))), 32))
 	currencyHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(instructions.ChainId)), 32))
-	return crypto.Keccak256(txIdHash, destinationHash, amountHash, currencyHash), inBlock, false
+	return crypto.Keccak256(txIdHash, utxoHash, destinationHash, amountHash, currencyHash), inBlock, false
 }
 
 func ProvePaymentPOW(instructions Instructions, basicAuth BasicAuth) (bool, bool) {
-	paymentHash, inBlock, getPoWTxErr := GetPoWTx(instructions, basicAuth)
+	paymentHash, inBlock, getPoWTxErr := GetPoWTx(instructions, basicAuth, false, 0)
 	if getPoWTxErr {
 		return false, true
 	}
-	if instructions.Prove {
-		if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inBlock == instructions.Ledger {
-			return true, false
-		}
-	} else {
-		if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inBlock > instructions.Ledger {
-			return true, false
-		} else if len(paymentHash) == 0 {
-			return true, false
-		}
+	if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inBlock == instructions.Ledger {
+		return true, false
 	}
 	return false, false
 }
@@ -285,6 +271,7 @@ type GetXRPTxRequestPayload struct {
 }
 
 type GetXRPTxResponse struct {
+	Account         string `json:"Account"`
 	Destination     string `json:"Destination"`
 	DestinationTag  int    `json:"DestinationTag"`
 	TransactionType string `json:"TransactionType"`
@@ -391,14 +378,18 @@ func GetXRPTx(instructions Instructions, basicAuth BasicAuth) ([]byte, uint64, b
 		amount = uint64(floatAmount * math.Pow(10, 15))
 		currency = issuedCurrencyResp.Currency + issuedCurrencyResp.Issuer
 	}
+	salt := crypto.Keccak256([]byte("FlareStateConnector_PAYMENTHASH"))
+	chainIdHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(instructions.ChainId)), 32))
+	ledgerHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(inLedger)), 32))
 	txIdHash := crypto.Keccak256([]byte(jsonResp["result"].Hash))
 	utxoHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(0))), 32))
+	originHash := crypto.Keccak256([]byte(jsonResp["result"].Account))
 	destinationHash := crypto.Keccak256([]byte(jsonResp["result"].Destination))
 	destinationTagHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(jsonResp["result"].DestinationTag))), 32))
 	destinationHash = crypto.Keccak256(destinationHash, destinationTagHash)
 	amountHash := crypto.Keccak256(common.LeftPadBytes(common.FromHex(hexutil.EncodeUint64(uint64(amount))), 32))
 	currencyHash := crypto.Keccak256([]byte(currency))
-	return crypto.Keccak256(txIdHash, utxoHash, destinationHash, amountHash, currencyHash), inLedger, false
+	return crypto.Keccak256(salt, chainIdHash, ledgerHash, txIdHash, utxoHash, originHash, destinationHash, currencyHash, amountHash), inLedger, false
 }
 
 func ProvePaymentXRP(instructions Instructions, basicAuth BasicAuth) (bool, bool) {
@@ -406,16 +397,8 @@ func ProvePaymentXRP(instructions Instructions, basicAuth BasicAuth) (bool, bool
 	if err {
 		return false, true
 	}
-	if instructions.Prove {
-		if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inLedger == instructions.Ledger {
-			return true, false
-		}
-	} else {
-		if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inLedger > instructions.Ledger {
-			return true, false
-		} else if len(paymentHash) == 0 {
-			return true, false
-		}
+	if len(paymentHash) > 0 && bytes.Equal(paymentHash, instructions.PaymentHash) && inLedger == instructions.Ledger {
+		return true, false
 	}
 	return false, false
 }
@@ -530,22 +513,20 @@ func GetVerificationPaths(checkRet []byte) (string, string) {
 
 type Instructions struct {
 	InitialCommit   bool
-	Prove           bool
 	ChainId         uint64
 	Ledger          uint64
-	Utxo            uint64
+	Utxo            uint16
 	AvailableLedger uint64
-	PaymentHash     []byte
 	TxId            []byte
+	PaymentHash     []byte
 }
 
 func ParseInstructions(checkRet []byte, availableLedger uint64) Instructions {
 	return Instructions{
-		InitialCommit:   binary.BigEndian.Uint32(checkRet[0:4]) == 1,
-		Prove:           binary.BigEndian.Uint32(checkRet[4:8]) == 1,
+		InitialCommit:   binary.BigEndian.Uint64(checkRet[0:8]) == 1,
 		ChainId:         binary.BigEndian.Uint64(checkRet[8:16]),
 		Ledger:          binary.BigEndian.Uint64(checkRet[16:24]),
-		Utxo:            binary.BigEndian.Uint64(checkRet[24:32]),
+		Utxo:            binary.BigEndian.Uint16(checkRet[30:32]),
 		AvailableLedger: availableLedger,
 		TxId:            checkRet[32:64],
 		PaymentHash:     checkRet[64:96],

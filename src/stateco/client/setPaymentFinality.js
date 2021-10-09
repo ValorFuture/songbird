@@ -10,22 +10,6 @@ const Common = require('ethereumjs-common').default;
 const fs = require('fs');
 const fetch = require('node-fetch');
 
-const stateConnectorContract = "0x1000000000000000000000000000000000000001";
-const chains = {
-	'btc': {
-		chainId: 0
-	},
-	'ltc': {
-		chainId: 1
-	},
-	'doge': {
-		chainId: 2
-	},
-	'xrp': {
-		chainId: 3
-	}
-};
-
 var config,
 	customCommon,
 	stateConnector,
@@ -93,7 +77,7 @@ async function run(chainId) {
 								leaf.destination,
 								leaf.amount.toString(),
 								leaf.currency).call({
-									from: config.accounts[1].address,
+									from: config.testAccount.address,
 									gas: config.flare.gas,
 									gasPrice: config.flare.gasPrice
 								}).catch(() => {
@@ -150,17 +134,22 @@ async function run(chainId) {
 							'destinationTag: \t', destinationTag, '\n',
 							'amount: \t\t', amount, '\n',
 							'currency: \t\t', currency, '\n');
+						const salt = web3.utils.soliditySha3("FlareStateConnector_PAYMENTHASH");
+						const chainIdHash = web3.utils.soliditySha3(chainId);
+						const ledgerHash = web3.utils.soliditySha3(parseInt(tx.result.inLedger));
 						const txIdHash = web3.utils.soliditySha3(tx.result.hash);
 						const utxoHash = web3.utils.soliditySha3(utxo);
+						const originHash = web3.utils.soliditySha3(tx.result.Account);
 						const destinationHash = web3.utils.soliditySha3(web3.utils.soliditySha3(tx.result.Destination), web3.utils.soliditySha3(destinationTag));
 						const amountHash = web3.utils.soliditySha3(amount);
 						const currencyHash = web3.utils.soliditySha3(currency);
-						const paymentHash = web3.utils.soliditySha3(txIdHash, utxoHash, destinationHash, amountHash, currencyHash);
+						const paymentHash = web3.utils.soliditySha3(salt, chainIdHash, ledgerHash, txIdHash, utxoHash, originHash, destinationHash, currencyHash, amountHash);
 						const leaf = {
 							"chainId": chainId,
 							"txId": '0x' + tx.result.hash,
 							"utxo": utxo,
 							"ledger": parseInt(tx.result.inLedger),
+							"origin": originHash,
 							"destination": destinationHash,
 							"amount": amount,
 							"currency": currencyHash,
@@ -171,12 +160,14 @@ async function run(chainId) {
 					leafPromise.then(leaf => {
 						stateConnector.methods.getPaymentFinality(
 							leaf.chainId,
+							leaf.ledger,
 							web3.utils.soliditySha3(leaf.txId),
 							leaf.utxo,
+							leaf.origin,
 							leaf.destination,
-							leaf.amount.toString(),
-							leaf.currency).call({
-								from: config.accounts[1].address,
+							leaf.currency,
+							leaf.amount.toString()).call({
+								from: config.testAccount.address,
 								gas: config.flare.gas,
 								gasPrice: config.flare.gasPrice
 							}).catch(() => {
@@ -184,7 +175,7 @@ async function run(chainId) {
 							.then(paymentResult => {
 								if (typeof paymentResult != "undefined") {
 									if ("finality" in paymentResult) {
-										if (paymentResult.finality == true) {
+										if (paymentResult.proven == true) {
 											console.log('Payment already proven.');
 											setTimeout(() => { return process.exit() }, 2500);
 										} else {
@@ -209,14 +200,13 @@ async function run(chainId) {
 }
 
 async function setPaymentFinality(leaf) {
-	web3.eth.getTransactionCount(config.accounts[1].address)
+	web3.eth.getTransactionCount(config.testAccount.address)
 		.then(nonce => {
 			return [stateConnector.methods.setPaymentFinality(
-				true,
 				leaf.chainId,
 				leaf.ledger,
-				leaf.utxo,
 				leaf.txId,
+				leaf.utxo,
 				leaf.paymentHash).encodeABI(), nonce];
 		})
 		.then(txData => {
@@ -225,11 +215,11 @@ async function setPaymentFinality(leaf) {
 				gasPrice: web3.utils.toHex(parseInt(config.flare.gasPrice)),
 				gas: web3.utils.toHex(config.flare.gas),
 				to: stateConnector.options.address,
-				from: config.accounts[1].address,
+				from: config.testAccount.address,
 				data: txData[0]
 			};
 			var tx = new Tx(rawTx, { common: customCommon });
-			var key = Buffer.from(config.accounts[1].privateKey, 'hex');
+			var key = Buffer.from(config.testAccount.privateKey, 'hex');
 			tx.sign(key);
 			var serializedTx = tx.serialize();
 			const txHash = web3.utils.sha3(serializedTx);
@@ -257,9 +247,10 @@ async function setPaymentFinality(leaf) {
 }
 
 
-async function configure(chainId) {
+async function configure(chainName) {
 	let rawConfig = fs.readFileSync('config.json');
 	config = JSON.parse(rawConfig);
+	let chainId = config.chains[chainName].chainId
 	if (chainId == 0) {
 		api = config.chains.btc.api;
 		username = config.chains.btc.username;
@@ -293,8 +284,8 @@ async function configure(chainId) {
 	stateConnector = new web3.eth.Contract(contract.abi);
 	// Smart contract EVM bytecode as hex
 	stateConnector.options.data = '0x' + contract.deployedBytecode;
-	stateConnector.options.from = config.accounts[1].address;
-	stateConnector.options.address = stateConnectorContract;
+	stateConnector.options.from = config.testAccount.address;
+	stateConnector.options.address = config.stateConnectorContract;
 	return run(chainId);
 }
 
@@ -306,13 +297,10 @@ async function processFailure(error) {
 const chainName = process.argv[2];
 const txId = process.argv[3];
 const voutN = process.argv[4];
+
 if (parseInt(voutN) >= 16) {
 	processFailure('Proof-of-work payment index too large, must be lower than 16.');
 } else if (parseInt(voutN) < 0) {
-	processFailure('Proof-of-work payment index must be positive.');
+	processFailure('UTXO index must be positive.');
 }
-if (chainName in chains) {
-	return configure(chains[chainName].chainId);
-} else {
-	processFailure('Invalid chainName');
-}
+return configure(chainName);

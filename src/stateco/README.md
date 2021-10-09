@@ -32,22 +32,6 @@ The following command proves a Litecoin payment in the first-position of the UTX
 node prove ltc 0956165f77106ad62d42a3236db3e47178adfa7a80cc1fad43b894fa4ed0c581 0
 ```
 
-## Disproving a Payment
-
-One can also prove that a payment has not occurred by a certain ledger index on the underlying chain. For example, the following command proves to the state connector contract that payment [F4D1EDBFB578A8C96CF12D90E9ADEDF22F556420276A1D0F13245E433020416A](https://livenet.xrpl.org/transactions/F4D1EDBFB578A8C96CF12D90E9ADEDF22F556420276A1D0F13245E433020416A) has not occurred by ledger 62880001 on the XRPL:
-
-```
-node disprove xrp F4D1EDBFB578A8C96CF12D90E9ADEDF22F556420276A1D0F13245E433020416A \
-20000000000 xrp 62880001 rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq 129053196
-```
-
-The following command proves that payment [6cdd66d490cd8a2963e2e906f7b1d04477229330359e12968d50300ddc0e9c92](https://live.blockcypher.com/ltc/tx/6cdd66d490cd8a2963e2e906f7b1d04477229330359e12968d50300ddc0e9c92/) has not occurred by ledger 2086110 on the Litecoin network. 
-
-```
-node disprove ltc 6cdd66d490cd8a2963e2e906f7b1d04477229330359e12968d50300ddc0e9c92 \
-14491399 ltc 2086110 LLhDcn7bepacf55ZoDsa7e6NWgJEPz1ZqJ 0
-```
-
 ## Custom-currency Proofs (e.g. Issued Currencies, ERC20s, etc.)
 
 The proving/disproving of a custom-currency payment is also supported. The state connector supports any issued currency and differentiates them by appending their currency code to its issuer's address, e.g. USDrL7jDKUNmxBG24QsqA6fDUwFwjndgMojje. For example, the following command proves that a [payment of USD](https://livenet.xrpl.org/transactions/8B3FB7F0B5BDAB705FDB152EBA20BF47159898D76812DA80BD367D99206B5C59) issued on the XRPL occurred:
